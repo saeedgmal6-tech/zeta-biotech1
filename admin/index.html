@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة الإدارة — ZETA BIOTECH</title>
+<link rel="stylesheet" href="../styles.css">
+<style>
+body{margin:0;background:#f5f6f7;font-family:Arial,sans-serif}.admin-head{background:#111;color:#fff;padding:18px 24px}.admin-head-inner{max-width:1100px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:15px}.admin-brand{font-weight:800}.logout{border:1px solid #555;background:transparent;color:#fff;padding:9px 14px;border-radius:8px;cursor:pointer}.wrap{max-width:1100px;margin:30px auto;padding:0 18px}.welcome{background:#fff;border-radius:16px;padding:24px;box-shadow:0 8px 30px rgba(0,0,0,.06)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:20px}.panel{background:#fff;border-radius:16px;padding:22px;box-shadow:0 8px 30px rgba(0,0,0,.06)}.panel h2{margin-top:0}.status{display:inline-block;padding:7px 10px;border-radius:20px;background:#e9f8ed;color:#176b2d;font-size:13px;font-weight:700}.note{color:#666;line-height:1.7}
+</style>
+</head>
+<body>
+<header class="admin-head"><div class="admin-head-inner"><div class="admin-brand">ZETA BIOTECH — Super Admin</div><button id="logout" class="logout">تسجيل الخروج</button></div></header>
+<main class="wrap">
+<section class="welcome"><span class="status">تم تسجيل الدخول</span><h1>لوحة الإدارة</h1><p id="welcomeText">جارٍ التحقق من الجلسة...</p><p class="note">هذه هي المرحلة الأولى من لوحة التحكم. سيتم إضافة إدارة بيانات الشركة والمنتجات والصور والبروشورات داخل هذه اللوحة بعد تجهيز التخزين وقاعدة البيانات.</p></section>
+<div class="grid"><section class="panel"><h2>🏢 بيانات الشركة</h2><p class="note">نبذة الشركة، العنوان، الهاتف، WhatsApp، البريد الإلكتروني وروابط التواصل.</p></section><section class="panel"><h2>📦 المنتجات</h2><p class="note">إضافة وتعديل وحذف المنتجات ورفع صور المنتجات.</p></section><section class="panel"><h2>📄 البروشورات</h2><p class="note">رفع وإدارة ملفات PDF الخاصة بالمنتجات والشركة.</p></section></div>
+</main>
+<script>
+(async function(){try{const r=await fetch('../api/admin/me',{cache:'no-store'});if(!r.ok){location.replace('./login.html');return}const data=await r.json();document.getElementById('welcomeText').textContent='مرحبًا بك، '+data.username;}catch(e){location.replace('./login.html');}})();
+document.getElementById('logout').addEventListener('click',async function(){await fetch('../api/admin/logout',{method:'POST'});location.replace('./login.html');});
+</script>
+</body>
+</html>
