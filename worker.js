@@ -1,6 +1,6 @@
 const SESSION_COOKIE = "zeta_admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
-const WORKER_VERSION = "cms-github-2026-09-03-01";
+const WORKER_VERSION = "cms-github-2026-09-03-02";
 const GITHUB_OWNER = "saeedgmal6-tech";
 const GITHUB_REPO = "zeta-biotech";
 const GITHUB_BRANCH = "main";
@@ -131,16 +131,41 @@ async function githubGetFile(env, path) {
   return { ok: true, exists: true, sha: data.sha, content: new TextDecoder().decode(bytes), data };
 }
 
-async function githubPutFile(env, path, content, message) {
+async function githubPutFile(env, path, content, message, createBackup) {
   if (!env.GITHUB_TOKEN) return { ok: false, status: 503, error: "GITHUB_TOKEN is not configured in Cloudflare." };
   const current = await githubGetFile(env, path);
   if (!current.ok) return current;
+
+  if (createBackup && current.exists && current.content !== content) {
+    const safeName = path.substring(path.lastIndexOf("/") + 1).replace(/[^A-Za-z0-9._-]/g, "_");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backupPath = "content/backups/" + timestamp + "-" + safeName;
+    const backupResponse = await fetch(githubUrl(backupPath), {
+      method: "PUT",
+      headers: { ...githubHeaders(env), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: "CMS backup before update " + path,
+        content: toBase64Utf8(current.content),
+        branch: GITHUB_BRANCH
+      })
+    });
+    const backupData = await backupResponse.json().catch(() => ({}));
+    if (!backupResponse.ok) return { ok: false, status: 502, error: "Backup failed. The content was not changed." };
+    const backupCommit = backupData.commit && backupData.commit.sha ? backupData.commit.sha : null;
+    const body = { message, content: toBase64Utf8(content), branch: GITHUB_BRANCH };
+    if (current.exists) body.sha = current.sha;
+    const response = await fetch(githubUrl(path), { method: "PUT", headers: { ...githubHeaders(env), "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) return { ok: false, status: response.status, error: data.message || "GitHub write failed." };
+    return { ok: true, commit: data.commit && data.commit.sha ? data.commit.sha : null, contentSha: data.content && data.content.sha ? data.content.sha : null, backup: backupPath, backupCommit };
+  }
+
   const body = { message, content: toBase64Utf8(content), branch: GITHUB_BRANCH };
   if (current.exists) body.sha = current.sha;
   const response = await fetch(githubUrl(path), { method: "PUT", headers: { ...githubHeaders(env), "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) return { ok: false, status: response.status, error: data.message || "GitHub write failed." };
-  return { ok: true, commit: data.commit && data.commit.sha ? data.commit.sha : null, contentSha: data.content && data.content.sha ? data.content.sha : null };
+  return { ok: true, commit: data.commit && data.commit.sha ? data.commit.sha : null, contentSha: data.content && data.content.sha ? data.content.sha : null, backup: null };
 }
 
 async function githubDeleteFile(env, path) {
@@ -194,9 +219,9 @@ async function handleContent(request, env, path) {
   if (payload === undefined) return json({ ok: false, error: "Missing data." }, 400);
   const content = JSON.stringify(payload, null, 2) + "\n";
   if (content.length > 2 * 1024 * 1024) return json({ ok: false, error: "Content is too large." }, 413);
-  const result = await githubPutFile(env, path, content, "CMS update " + path);
+  const result = await githubPutFile(env, path, content, "CMS update " + path, true);
   if (!result.ok) return json({ ok: false, error: result.error }, result.status);
-  return json({ ok: true, commit: result.commit, contentSha: result.contentSha });
+  return json({ ok: true, commit: result.commit, contentSha: result.contentSha, backup: result.backup || null });
 }
 
 async function handleUpload(request, env) {
