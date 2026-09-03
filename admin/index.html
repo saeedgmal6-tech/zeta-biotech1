@@ -6,18 +6,22 @@
 <title>لوحة الإدارة — ZETA BIOTECH</title>
 <link rel="stylesheet" href="../styles.css">
 <style>
-body{margin:0;background:#f5f6f7;font-family:Arial,sans-serif}.admin-head{background:#111;color:#fff;padding:18px 24px}.admin-head-inner{max-width:1100px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:15px}.admin-brand{font-weight:800}.logout{border:1px solid #555;background:transparent;color:#fff;padding:9px 14px;border-radius:8px;cursor:pointer}.wrap{max-width:1100px;margin:30px auto;padding:0 18px}.welcome{background:#fff;border-radius:16px;padding:24px;box-shadow:0 8px 30px rgba(0,0,0,.06)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:20px}.panel{background:#fff;border-radius:16px;padding:22px;box-shadow:0 8px 30px rgba(0,0,0,.06)}.panel h2{margin-top:0}.status{display:inline-block;padding:7px 10px;border-radius:20px;background:#e9f8ed;color:#176b2d;font-size:13px;font-weight:700}.note{color:#666;line-height:1.7}
+body{margin:0;background:#f5f7f8;font-family:Arial,sans-serif;color:#18212b}.admin-head{background:#111;color:#fff;padding:16px 22px}.admin-head-inner{max-width:1200px;margin:auto;display:flex;align-items:center;justify-content:space-between}.admin-brand{font-weight:800;font-size:18px}.logout{border:1px solid #555;background:transparent;color:#fff;padding:9px 14px;border-radius:8px;cursor:pointer}.wrap{max-width:1200px;margin:25px auto;padding:0 18px}.welcome{background:#fff;border-radius:16px;padding:24px;box-shadow:0 8px 30px rgba(0,0,0,.06)}.status{display:inline-block;padding:7px 10px;border-radius:20px;background:#e9f8ed;color:#176b2d;font-size:13px;font-weight:700}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:20px}.panel{background:#fff;border-radius:16px;padding:22px;box-shadow:0 8px 30px rgba(0,0,0,.06)}.panel h2{margin-top:0}.note{color:#666;line-height:1.7}.api-status{margin-top:15px;font-weight:700}.ok{color:#176b2d}.bad{color:#a11}
 </style>
 </head>
 <body>
 <header class="admin-head"><div class="admin-head-inner"><div class="admin-brand">ZETA BIOTECH — Super Admin</div><button id="logout" class="logout">تسجيل الخروج</button></div></header>
 <main class="wrap">
-<section class="welcome"><span class="status">تم تسجيل الدخول</span><h1>لوحة الإدارة</h1><p id="welcomeText">جارٍ التحقق من الجلسة...</p><p class="note">هذه هي المرحلة الأولى من لوحة التحكم. سيتم إضافة إدارة بيانات الشركة والمنتجات والصور والبروشورات داخل هذه اللوحة بعد تجهيز التخزين وقاعدة البيانات.</p></section>
-<div class="grid"><section class="panel"><h2>🏢 بيانات الشركة</h2><p class="note">نبذة الشركة، العنوان، الهاتف، WhatsApp، البريد الإلكتروني وروابط التواصل.</p></section><section class="panel"><h2>📦 المنتجات</h2><p class="note">إضافة وتعديل وحذف المنتجات ورفع صور المنتجات.</p></section><section class="panel"><h2>📄 البروشورات</h2><p class="note">رفع وإدارة ملفات PDF الخاصة بالمنتجات والشركة.</p></section></div>
-</main>
+<section class="welcome"><span class="status">لوحة Super Admin</span><h1>مرحبًا بك في لوحة الإدارة</h1><p id="welcomeText">جارٍ التحقق من جلسة الدخول...</p><p id="apiStatus" class="api-status">جارٍ فحص اتصال لوحة الإدارة...</p></section>
+<div class="grid">
+<section class="panel"><h2>🏢 بيانات الشركة</h2><p class="note">إدارة النبذة والعنوان والهاتف وWhatsApp والبريد الإلكتروني وروابط التواصل.</p></section>
+<section class="panel"><h2>📦 المنتجات</h2><p class="note">إضافة وتعديل وحذف المنتجات باللغتين مع الصور والتفاصيل.</p></section>
+<section class="panel"><h2>📄 البروشورات</h2><p class="note">إدارة ملفات PDF وربطها بالمنتجات والشركة.</p></section>
+<section class="panel"><h2>📰 الأخبار</h2><p class="note">إضافة وتعديل وحذف أخبار الشركة والمحتوى المنشور.</p></section>
+</div></main>
 <script>
-(async function(){try{const r=await fetch('../api/admin/me',{cache:'no-store'});if(!r.ok){location.replace('./login.html');return}const data=await r.json();document.getElementById('welcomeText').textContent='مرحبًا بك، '+data.username;}catch(e){location.replace('./login.html');}})();
-document.getElementById('logout').addEventListener('click',async function(){await fetch('../api/admin/logout',{method:'POST'});location.replace('./login.html');});
+(async function(){var welcome=document.getElementById('welcomeText');var status=document.getElementById('apiStatus');try{var r=await fetch('../api/admin/me',{cache:'no-store',credentials:'same-origin'});if(!r.ok){location.replace('./login.html');return;}var data=await r.json();welcome.textContent='تم تسجيل الدخول باسم: '+(data.username||'Super Admin');status.textContent='اتصال لوحة الإدارة يعمل.';status.className='api-status ok';}catch(e){status.textContent='تعذر الاتصال بخدمة الإدارة.';status.className='api-status bad';}})();
+document.getElementById('logout').addEventListener('click',async function(){try{await fetch('../api/admin/logout',{method:'GET',credentials:'same-origin',cache:'no-store'});}catch(e){}location.replace('./login.html');});
 </script>
 </body>
 </html>
