@@ -4,24 +4,92 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>لوحة الإدارة — ZETA BIOTECH</title>
-<link rel="stylesheet" href="../styles.css">
 <style>
-body{margin:0;background:#f5f7f8;font-family:Arial,sans-serif;color:#18212b}.admin-head{background:#111;color:#fff;padding:16px 22px}.admin-head-inner{max-width:1200px;margin:auto;display:flex;align-items:center;justify-content:space-between}.admin-brand{font-weight:800;font-size:18px}.logout{border:1px solid #555;background:transparent;color:#fff;padding:9px 14px;border-radius:8px;cursor:pointer}.wrap{max-width:1200px;margin:25px auto;padding:0 18px}.welcome{background:#fff;border-radius:16px;padding:24px;box-shadow:0 8px 30px rgba(0,0,0,.06)}.status{display:inline-block;padding:7px 10px;border-radius:20px;background:#e9f8ed;color:#176b2d;font-size:13px;font-weight:700}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:20px}.panel{background:#fff;border-radius:16px;padding:22px;box-shadow:0 8px 30px rgba(0,0,0,.06)}.panel h2{margin-top:0}.note{color:#666;line-height:1.7}.api-status{margin-top:15px;font-weight:700}.ok{color:#176b2d}.bad{color:#a11}
+*{box-sizing:border-box}body{margin:0;background:#f3f6f8;color:#17212b;font-family:Arial,Tahoma,sans-serif}.top{background:#111820;color:#fff;position:sticky;top:0;z-index:20;box-shadow:0 3px 15px #0002}.topin{max-width:1250px;margin:auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:15px}.brand{font-size:18px;font-weight:800}.top button{border:1px solid #66717b;background:transparent;color:#fff;padding:9px 14px;border-radius:8px;cursor:pointer}.layout{max-width:1250px;margin:22px auto;padding:0 18px;display:grid;grid-template-columns:220px 1fr;gap:18px}.nav,.card{background:#fff;border-radius:14px;box-shadow:0 7px 25px #0000000d}.nav{padding:10px;height:max-content;position:sticky;top:80px}.nav button{display:block;width:100%;border:0;background:transparent;text-align:right;padding:13px 12px;border-radius:9px;cursor:pointer;font-weight:700;color:#26323d}.nav button.active,.nav button:hover{background:#eef3f6}.main{min-width:0}.page{display:none}.page.active{display:block}.card{padding:20px;margin-bottom:18px}.card h2{margin:0 0 16px}.muted{color:#66727d}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.field{margin-bottom:13px}.field label{display:block;font-weight:700;margin-bottom:6px}.field input,.field textarea,.field select{width:100%;border:1px solid #d5dce1;border-radius:8px;padding:10px;font:inherit;background:#fff}.field textarea{min-height:105px;resize:vertical}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:8px;padding:10px 15px;cursor:pointer;font-weight:700}.primary{background:#17212b;color:#fff}.secondary{background:#e9eef1;color:#17212b}.danger{background:#b42318;color:#fff}.success{background:#18794e;color:#fff}.notice{padding:11px 13px;border-radius:8px;background:#eef3f6;margin-bottom:15px}.notice.ok{background:#e9f7ef;color:#146c43}.notice.err{background:#fdecec;color:#9b1c1c}.item{border:1px solid #e0e5e8;border-radius:12px;padding:15px;margin-bottom:12px;background:#fafcfd}.itemhead{display:flex;justify-content:space-between;gap:10px;align-items:center}.itemhead strong{font-size:16px}.thumb{width:75px;height:75px;object-fit:cover;border-radius:8px;border:1px solid #ddd;background:#eee}.counter{font-size:22px;font-weight:800}.filebox{border:1px dashed #b9c2c9;padding:14px;border-radius:9px}.small{font-size:12px}.loading{opacity:.6;pointer-events:none}@media(max-width:850px){.layout{grid-template-columns:1fr}.nav{position:static;display:flex;overflow:auto;gap:5px}.nav button{min-width:max-content;text-align:center}.grid2,.grid3{grid-template-columns:1fr}.topin{padding:12px 14px}.brand{font-size:15px}}
 </style>
 </head>
 <body>
-<header class="admin-head"><div class="admin-head-inner"><div class="admin-brand">ZETA BIOTECH — Super Admin</div><button id="logout" class="logout">تسجيل الخروج</button></div></header>
-<main class="wrap">
-<section class="welcome"><span class="status">لوحة Super Admin</span><h1>مرحبًا بك في لوحة الإدارة</h1><p id="welcomeText">جارٍ التحقق من جلسة الدخول...</p><p id="apiStatus" class="api-status">جارٍ فحص اتصال لوحة الإدارة...</p></section>
-<div class="grid">
-<section class="panel"><h2>🏢 بيانات الشركة</h2><p class="note">إدارة النبذة والعنوان والهاتف وWhatsApp والبريد الإلكتروني وروابط التواصل.</p></section>
-<section class="panel"><h2>📦 المنتجات</h2><p class="note">إضافة وتعديل وحذف المنتجات باللغتين مع الصور والتفاصيل.</p></section>
-<section class="panel"><h2>📄 البروشورات</h2><p class="note">إدارة ملفات PDF وربطها بالمنتجات والشركة.</p></section>
-<section class="panel"><h2>📰 الأخبار</h2><p class="note">إضافة وتعديل وحذف أخبار الشركة والمحتوى المنشور.</p></section>
-</div></main>
+<header class="top"><div class="topin"><div class="brand">ZETA BIOTECH — Super Admin</div><button id="logout">تسجيل الخروج</button></div></header>
+<div class="layout">
+<nav class="nav">
+<button class="tab active" data-page="dashboard">لوحة التحكم</button>
+<button class="tab" data-page="company">🏢 بيانات الشركة</button>
+<button class="tab" data-page="products">📦 المنتجات</button>
+<button class="tab" data-page="brochures">📄 البروشورات</button>
+<button class="tab" data-page="news">📰 الأخبار</button>
+</nav>
+<main class="main">
+<div id="message"></div>
+<section id="dashboard" class="page active">
+<div class="card"><h2>مرحبًا بك في لوحة الإدارة</h2><p class="muted">هذه هي لوحة التحكم الخاصة بـ ZETA BIOTECH. أي تعديل يتم حفظه مباشرة في ملفات المحتوى داخل GitHub.</p></div>
+<div class="grid3"><div class="card"><div class="muted">المنتجات</div><div id="countProducts" class="counter">0</div></div><div class="card"><div class="muted">البروشورات</div><div id="countBrochures" class="counter">0</div></div><div class="card"><div class="muted">الأخبار</div><div id="countNews" class="counter">0</div></div></div>
+<div class="card"><h2>حالة الاتصال</h2><div id="connection">جارٍ التحقق...</div></div>
+</section>
+<section id="company" class="page">
+<div class="card"><h2>بيانات الشركة</h2><div class="grid2">
+<div class="field"><label>اسم الشركة</label><input id="companyName"></div>
+<div class="field"><label>الهاتف</label><input id="phone"></div>
+<div class="field"><label>WhatsApp</label><input id="whatsapp"></div>
+<div class="field"><label>البريد الإلكتروني</label><input id="email" type="email"></div>
+<div class="field"><label>العنوان — عربي</label><input id="addressAr"></div>
+<div class="field"><label>العنوان — English</label><input id="addressEn" dir="ltr"></div>
+<div class="field"><label>Google Maps</label><input id="googleMaps" dir="ltr"></div>
+<div class="field"><label>Facebook</label><input id="facebook" dir="ltr"></div>
+<div class="field"><label>Instagram</label><input id="instagram" dir="ltr"></div>
+<div class="field"><label>LinkedIn</label><input id="linkedin" dir="ltr"></div>
+</div>
+<div class="field"><label>نبذة الشركة — عربي</label><textarea id="overviewAr"></textarea></div>
+<div class="field"><label>Company Overview — English</label><textarea id="overviewEn" dir="ltr"></textarea></div>
+<div class="field"><label>الفوتر — عربي</label><input id="footerAr"></div>
+<div class="field"><label>Footer — English</label><input id="footerEn" dir="ltr"></div>
+<div class="actions"><button class="btn primary" id="saveCompany">حفظ بيانات الشركة</button></div></div>
+</section>
+<section id="products" class="page">
+<div class="card"><h2>إضافة منتج</h2><div class="grid2"><div class="field"><label>اسم المنتج — عربي</label><input id="pNameAr"></div><div class="field"><label>Product Name — English</label><input id="pNameEn" dir="ltr"></div><div class="field"><label>التفاصيل — عربي</label><textarea id="pDescAr"></textarea></div><div class="field"><label>Description — English</label><textarea id="pDescEn" dir="ltr"></textarea></div></div><div class="field"><label>صورة المنتج</label><div class="filebox"><input id="pImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"><div id="pImageInfo" class="small muted">لم يتم اختيار صورة</div></div></div><div class="field"><label>رابط صورة المنتج</label><input id="pImage" dir="ltr" placeholder="يتم تعبئته تلقائيًا بعد رفع الصورة"></div><div class="field"><label>البروشور المرتبط — رابط PDF</label><input id="pBrochure" dir="ltr"></div><div class="actions"><button class="btn primary" id="addProduct">إضافة المنتج</button><button class="btn secondary" id="clearProduct">تفريغ</button></div></div>
+<div class="card"><h2>المنتجات الحالية</h2><div id="productsList"></div></div>
+</section>
+<section id="brochures" class="page">
+<div class="card"><h2>إضافة بروشور / PDF</h2><div class="grid2"><div class="field"><label>العنوان — عربي</label><input id="bTitleAr"></div><div class="field"><label>Title — English</label><input id="bTitleEn" dir="ltr"></div><div class="field"><label>الوصف — عربي</label><textarea id="bDescAr"></textarea></div><div class="field"><label>Description — English</label><textarea id="bDescEn" dir="ltr"></textarea></div></div><div class="field"><label>ملف PDF</label><div class="filebox"><input id="bFile" type="file" accept="application/pdf"><div id="bFileInfo" class="small muted">لم يتم اختيار ملف</div></div></div><div class="field"><label>رابط PDF</label><input id="bUrl" dir="ltr"></div><div class="actions"><button class="btn primary" id="addBrochure">إضافة البروشور</button><button class="btn secondary" id="clearBrochure">تفريغ</button></div></div>
+<div class="card"><h2>البروشورات الحالية</h2><div id="brochuresList"></div></div>
+</section>
+<section id="news" class="page">
+<div class="card"><h2>إضافة خبر</h2><div class="grid2"><div class="field"><label>عنوان الخبر — عربي</label><input id="nTitleAr"></div><div class="field"><label>News Title — English</label><input id="nTitleEn" dir="ltr"></div><div class="field"><label>المحتوى — عربي</label><textarea id="nBodyAr"></textarea></div><div class="field"><label>Content — English</label><textarea id="nBodyEn" dir="ltr"></textarea></div></div><div class="actions"><button class="btn primary" id="addNews">إضافة الخبر</button><button class="btn secondary" id="clearNews">تفريغ</button></div></div>
+<div class="card"><h2>الأخبار الحالية</h2><div id="newsList"></div></div>
+</section>
+</main></div>
 <script>
-(async function(){var welcome=document.getElementById('welcomeText');var status=document.getElementById('apiStatus');try{var r=await fetch('../api/admin/me',{cache:'no-store',credentials:'same-origin'});if(!r.ok){location.replace('./login.html');return;}var data=await r.json();welcome.textContent='تم تسجيل الدخول باسم: '+(data.username||'Super Admin');status.textContent='اتصال لوحة الإدارة يعمل.';status.className='api-status ok';}catch(e){status.textContent='تعذر الاتصال بخدمة الإدارة.';status.className='api-status bad';}})();
-document.getElementById('logout').addEventListener('click',async function(){try{await fetch('../api/admin/logout',{method:'GET',credentials:'same-origin',cache:'no-store'});}catch(e){}location.replace('./login.html');});
+const state={site:null,products:[],brochures:[],news:[]};
+const $=id=>document.getElementById(id);
+function msg(text,ok=true){$('message').innerHTML='<div class="notice '+(ok?'ok':'err')+'">'+esc(text)+'</div>';setTimeout(()=>$('message').innerHTML='',4500)}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+async function api(path,options={}){options.credentials='same-origin';options.cache='no-store';let r=await fetch(path,options);let d={};try{d=await r.json()}catch(e){}if(r.status===401){location.replace('./login.html');throw new Error('انتهت جلسة الدخول.')}if(!r.ok||d.ok===false)throw new Error(d.error||('HTTP '+r.status));return d}
+async function load(){await api('../api/admin/me');let [s,p,b,n]=await Promise.all([api('../api/admin/content/site'),api('../api/admin/content/products'),api('../api/admin/content/brochures'),api('../api/admin/content/news')]);state.site=s.data||{company:{}};state.products=(p.data&&p.data.products)||[];state.brochures=(b.data&&b.data.brochures)||[];state.news=(n.data&&n.data.news)||[];fillCompany();renderAll();$('connection').textContent='متصل — نظام CMS يعمل ويقرأ من GitHub.'}
+function fillCompany(){let c=state.site.company||{};let o=c.overview||{},a=c.address||{},f=c.footer||{};$('companyName').value=c.name||'';$('phone').value=c.phone||'';$('whatsapp').value=c.whatsapp||'';$('email').value=c.email||'';$('addressAr').value=a.ar||'';$('addressEn').value=a.en||'';$('googleMaps').value=c.googleMaps||'';$('facebook').value=c.facebook||'';$('instagram').value=c.instagram||'';$('linkedin').value=c.linkedin||'';$('overviewAr').value=o.ar||'';$('overviewEn').value=o.en||'';$('footerAr').value=f.ar||'';$('footerEn').value=f.en||''}
+function renderAll(){renderProducts();renderBrochures();renderNews();$('countProducts').textContent=state.products.length;$('countBrochures').textContent=state.brochures.length;$('countNews').textContent=state.news.length}
+async function save(path,data){await api('../api/admin/content/'+path,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})})}
+async function upload(file){if(!file)throw new Error('اختر ملفًا أولاً');if(file.size>10*1024*1024)throw new Error('حجم الملف أكبر من 10 MB');let data=await new Promise((res,rej)=>{let r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=()=>rej(new Error('تعذر قراءة الملف'));r.readAsDataURL(file)});let d=await api('../api/admin/upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:file.name,mime:file.type,data})});return d.url||('/'+d.path)}
+$('saveCompany').onclick=async()=>{try{$('saveCompany').disabled=true;state.site.company={name:$('companyName').value.trim(),phone:$('phone').value.trim(),whatsapp:$('whatsapp').value.trim(),email:$('email').value.trim(),googleMaps:$('googleMaps').value.trim(),facebook:$('facebook').value.trim(),instagram:$('instagram').value.trim(),linkedin:$('linkedin').value.trim(),overview:{ar:$('overviewAr').value,en:$('overviewEn').value},address:{ar:$('addressAr').value,en:$('addressEn').value},footer:{ar:$('footerAr').value,en:$('footerEn').value}};await save('site',state.site);msg('تم حفظ بيانات الشركة بنجاح')}catch(e){msg(e.message,false)}finally{$('saveCompany').disabled=false}}
+$('pImageFile').onchange=()=>{$('pImageInfo').textContent=$('pImageFile').files[0]?$('pImageFile').files[0].name:'لم يتم اختيار صورة'};
+$('bFile').onchange=()=>{$('bFileInfo').textContent=$('bFile').files[0]?$('bFile').files[0].name:'لم يتم اختيار ملف'};
+$('addProduct').onclick=async()=>{try{$('addProduct').disabled=true;let image=$('pImage').value.trim();if($('pImageFile').files[0])image=await upload($('pImageFile').files[0]);state.products.push({id:id(),name:{ar:$('pNameAr').value.trim(),en:$('pNameEn').value.trim()},description:{ar:$('pDescAr').value,en:$('pDescEn').value},image:image,brochure:$('pBrochure').value.trim()});await save('products',{products:state.products});clearProduct();renderAll();msg('تمت إضافة المنتج وحفظه بنجاح')}catch(e){msg(e.message,false)}finally{$('addProduct').disabled=false}}
+function clearProduct(){$('pNameAr').value='';$('pNameEn').value='';$('pDescAr').value='';$('pDescEn').value='';$('pImage').value='';$('pImageFile').value='';$('pImageInfo').textContent='لم يتم اختيار صورة';$('pBrochure').value=''}
+$('clearProduct').onclick=clearProduct;
+function renderProducts(){let box=$('productsList');if(!state.products.length){box.innerHTML='<p class="muted">لا توجد منتجات حتى الآن.</p>';return}box.innerHTML=state.products.map((p,i)=>{let n=p.name||{},d=p.description||{};return '<div class="item"><div class="itemhead"><strong>'+esc(n.ar||n.en||'منتج')+'</strong><span class="small muted">'+esc(n.en||'')+'</span></div><div style="display:flex;gap:14px;margin-top:12px">'+(p.image?'<img class="thumb" src="'+esc(p.image)+'" alt="">':'')+'<div style="flex:1"><p>'+esc(d.ar||'')+'</p><p dir="ltr">'+esc(d.en||'')+'</p><div class="actions"><button class="btn danger" onclick="removeProduct('+i+')">حذف المنتج</button></div></div></div></div>'}).join('')}
+window.removeProduct=async i=>{if(!confirm('هل تريد حذف هذا المنتج؟'))return;try{state.products.splice(i,1);await save('products',{products:state.products});renderAll();msg('تم حذف المنتج')}catch(e){msg(e.message,false)}};
+$('addBrochure').onclick=async()=>{try{$('addBrochure').disabled=true;let url=$('bUrl').value.trim();if($('bFile').files[0])url=await upload($('bFile').files[0]);if(!url)throw new Error('اختر ملف PDF أو أدخل رابط PDF');state.brochures.push({id:id(),title:{ar:$('bTitleAr').value.trim(),en:$('bTitleEn').value.trim()},description:{ar:$('bDescAr').value,en:$('bDescEn').value},url:url});await save('brochures',{brochures:state.brochures});clearBrochure();renderAll();msg('تمت إضافة البروشور وحفظه بنجاح')}catch(e){msg(e.message,false)}finally{$('addBrochure').disabled=false}}
+function clearBrochure(){$('bTitleAr').value='';$('bTitleEn').value='';$('bDescAr').value='';$('bDescEn').value='';$('bUrl').value='';$('bFile').value='';$('bFileInfo').textContent='لم يتم اختيار ملف'}
+$('clearBrochure').onclick=clearBrochure;
+function renderBrochures(){let box=$('brochuresList');if(!state.brochures.length){box.innerHTML='<p class="muted">لا توجد بروشورات حتى الآن.</p>';return}box.innerHTML=state.brochures.map((b,i)=>{let t=b.title||{};return '<div class="item"><div class="itemhead"><strong>'+esc(t.ar||t.en||'بروشور')+'</strong><a href="'+esc(b.url||'#')+'" target="_blank" rel="noopener">فتح PDF</a></div><p>'+esc((b.description||{}).ar||'')+'</p><div class="actions"><button class="btn danger" onclick="removeBrochure('+i+')">حذف البروشور</button></div></div>'}).join('')}
+window.removeBrochure=async i=>{if(!confirm('هل تريد حذف هذا البروشور؟'))return;try{state.brochures.splice(i,1);await save('brochures',{brochures:state.brochures});renderAll();msg('تم حذف البروشور')}catch(e){msg(e.message,false)}};
+$('addNews').onclick=async()=>{try{$('addNews').disabled=true;state.news.push({id:id(),date:new Date().toISOString(),title:{ar:$('nTitleAr').value.trim(),en:$('nTitleEn').value.trim()},body:{ar:$('nBodyAr').value,en:$('nBodyEn').value}});await save('news',{news:state.news});clearNews();renderAll();msg('تمت إضافة الخبر وحفظه بنجاح')}catch(e){msg(e.message,false)}finally{$('addNews').disabled=false}}
+function clearNews(){$('nTitleAr').value='';$('nTitleEn').value='';$('nBodyAr').value='';$('nBodyEn').value=''}
+$('clearNews').onclick=clearNews;
+function renderNews(){let box=$('newsList');if(!state.news.length){box.innerHTML='<p class="muted">لا توجد أخبار حتى الآن.</p>';return}box.innerHTML=state.news.map((n,i)=>{let t=n.title||{};return '<div class="item"><div class="itemhead"><strong>'+esc(t.ar||t.en||'خبر')+'</strong><span class="small muted">'+esc(n.date||'')+'</span></div><p>'+esc((n.body||{}).ar||'')+'</p><div class="actions"><button class="btn danger" onclick="removeNews('+i+')">حذف الخبر</button></div></div>'}).join('')}
+window.removeNews=async i=>{if(!confirm('هل تريد حذف هذا الخبر؟'))return;try{state.news.splice(i,1);await save('news',{news:state.news});renderAll();msg('تم حذف الخبر')}catch(e){msg(e.message,false)}};
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.page).classList.add('active')});
+$('logout').onclick=async()=>{try{await fetch('../api/admin/logout',{credentials:'same-origin',cache:'no-store'})}finally{location.replace('./login.html')}};
+(async()=>{try{await load()}catch(e){$('connection').textContent=e.message;msg(e.message,false)}})();
 </script>
 </body>
 </html>
