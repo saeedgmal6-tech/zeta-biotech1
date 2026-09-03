@@ -1,6 +1,6 @@
 const SESSION_COOKIE = "zeta_admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
-const WORKER_VERSION = "cms-github-2026-09-03-02";
+const WORKER_VERSION = "cms-github-2026-09-03-03";
 const GITHUB_OWNER = "saeedgmal6-tech";
 const GITHUB_REPO = "zeta-biotech";
 const GITHUB_BRANCH = "main";
@@ -143,11 +143,7 @@ async function githubPutFile(env, path, content, message, createBackup) {
     const backupResponse = await fetch(githubUrl(backupPath), {
       method: "PUT",
       headers: { ...githubHeaders(env), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: "CMS backup before update " + path,
-        content: toBase64Utf8(current.content),
-        branch: GITHUB_BRANCH
-      })
+      body: JSON.stringify({ message: "CMS backup before update " + path, content: toBase64Utf8(current.content), branch: GITHUB_BRANCH })
     });
     const backupData = await backupResponse.json().catch(() => ({}));
     if (!backupResponse.ok) return { ok: false, status: 502, error: "Backup failed. The content was not changed." };
@@ -260,6 +256,89 @@ async function handleDeleteFile(request, env) {
   return json(result);
 }
 
+function adminEnhancementResponse(response) {
+  const script = `
+<style>
+#zetaAdminLoader{position:fixed;inset:0;background:rgba(7,27,43,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:99999;opacity:1;transition:opacity .2s ease}
+#zetaAdminLoader.zeta-hidden{opacity:0;pointer-events:none}
+#zetaAdminLoader .zeta-loader-card{background:#fff;border-radius:18px;padding:24px 30px;min-width:220px;text-align:center;box-shadow:0 20px 60px #0004;color:#071b2b;font-weight:800}
+#zetaAdminLoader .zeta-spinner{width:38px;height:38px;border:4px solid #d9e7e8;border-top-color:#0b7773;border-radius:50%;margin:0 auto 13px;animation:zetaSpin .8s linear infinite}
+@keyframes zetaSpin{to{transform:rotate(360deg)}}
+#zetaAdminToast{position:fixed;left:22px;bottom:22px;z-index:100000;display:flex;flex-direction:column;gap:9px;max-width:min(420px,calc(100vw - 44px))}
+.zeta-toast{padding:13px 16px;border-radius:12px;background:#071b2b;color:#fff;box-shadow:0 12px 30px #0003;font-weight:700;line-height:1.5;animation:zetaToastIn .2s ease}
+.zeta-toast.ok{background:#18794e}.zeta-toast.err{background:#b42318}
+@keyframes zetaToastIn{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+</style>
+<div id="zetaAdminLoader"><div class="zeta-loader-card"><div class="zeta-spinner"></div><div id="zetaAdminLoaderText">جارٍ التحميل...</div></div></div>
+<div id="zetaAdminToast"></div>
+<script>
+(function(){
+  var loader;
+  var active=0;
+  var hideTimer;
+  function ensure(){
+    loader=document.getElementById('zetaAdminLoader');
+    return loader;
+  }
+  function show(text){
+    var el=ensure();
+    if(!el)return;
+    clearTimeout(hideTimer);
+    var label=document.getElementById('zetaAdminLoaderText');
+    if(label)label.textContent=text||'جارٍ التنفيذ...';
+    el.classList.remove('zeta-hidden');
+  }
+  function hide(){
+    var el=ensure();
+    if(!el)return;
+    clearTimeout(hideTimer);
+    hideTimer=setTimeout(function(){if(active<=0)el.classList.add('zeta-hidden')},120);
+  }
+  function toast(text,ok){
+    if(!text)return;
+    var box=document.getElementById('zetaAdminToast');
+    if(!box)return;
+    var item=document.createElement('div');
+    item.className='zeta-toast '+(ok?'ok':'err');
+    item.textContent=text;
+    box.appendChild(item);
+    setTimeout(function(){item.style.opacity='0';item.style.transition='opacity .2s';setTimeout(function(){item.remove()},220)},4200);
+  }
+  function requestLabel(method){return String(method||'GET').toUpperCase()==='GET'?'جارٍ تحميل البيانات...':'جارٍ حفظ التغييرات...'}
+  var originalFetch=window.fetch;
+  window.fetch=function(input,init){
+    var method=(init&&init.method)||((input&&input.method)||'GET');
+    var isAdmin=typeof input==='string' ? input.indexOf('/api/admin/')===0 : input&&input.url&&input.url.indexOf('/api/admin/')!==-1;
+    if(!isAdmin)return originalFetch.apply(this,arguments);
+    active++;
+    show(requestLabel(method));
+    return originalFetch.apply(this,arguments).then(function(response){
+      var clone=response.clone();
+      var m=String(method).toUpperCase();
+      if(m!=='GET'){
+        clone.json().then(function(data){
+          if(response.ok&&data&&data.ok!==false)toast('تم تنفيذ العملية بنجاح',true);
+          else toast((data&&data.error)||'حدث خطأ أثناء تنفيذ العملية',false);
+        }).catch(function(){
+          if(!response.ok)toast('حدث خطأ أثناء تنفيذ العملية',false);
+        });
+      }
+      return response;
+    }).catch(function(error){
+      toast(error&&error.message?error.message:'تعذر الاتصال بالخادم',false);
+      throw error;
+    }).finally(function(){
+      active--;
+      if(active<=0)hide();
+    });
+  };
+  window.addEventListener('load',function(){setTimeout(function(){if(active<=0)hide()},350)});
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){if(active<=0)hide()},600)});
+})();
+</script>`;
+  return new HTMLRewriter().on("head", { element(element) { element.append(script, { html: true }); } }).transform(response);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -274,6 +353,8 @@ export default {
       const session = await requireAdmin(request, env);
       if (!session) return Response.redirect(new URL("/admin/login.html", request.url), 302);
     }
-    return env.ASSETS.fetch(request);
+    const assetResponse = await env.ASSETS.fetch(request);
+    if (url.pathname === "/admin/index.html" && request.method === "GET" && assetResponse.ok) return adminEnhancementResponse(assetResponse);
+    return assetResponse;
   }
 };
