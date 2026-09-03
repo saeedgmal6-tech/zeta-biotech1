@@ -1,6 +1,6 @@
 const SESSION_COOKIE = "zeta_admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
-const WORKER_VERSION = "cms-github-2026-09-03-03";
+const WORKER_VERSION = "cms-github-2026-09-04-01";
 const GITHUB_OWNER = "saeedgmal6-tech";
 const GITHUB_REPO = "zeta-biotech";
 const GITHUB_BRANCH = "main";
@@ -8,9 +8,14 @@ const CONTENT_PATHS = new Set([
   "content/site.json",
   "content/products.json",
   "content/brochures.json",
-  "content/news.json"
+  "content/news.json",
+  "content/certifications.json",
+  "content/jobs.json",
+  "content/leads.json",
+  "content/analytics.json"
 ]);
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_JSON_BYTES = 2 * 1024 * 1024;
 
 function base64UrlEncode(value) {
   const bytes = value instanceof Uint8Array ? value : new TextEncoder().encode(value);
@@ -123,19 +128,18 @@ function toBase64Utf8(text) {
 async function githubGetFile(env, path) {
   if (!env.GITHUB_TOKEN) return { ok: false, status: 503, error: "GITHUB_TOKEN is not configured in Cloudflare." };
   const response = await fetch(githubUrl(path) + "?ref=" + encodeURIComponent(GITHUB_BRANCH), { headers: githubHeaders(env) });
-  if (response.status === 404) return { ok: true, exists: false, data: null };
+  if (response.status === 404) return { ok: true, exists: false, content: null };
   if (!response.ok) return { ok: false, status: response.status, error: "GitHub read failed." };
   const data = await response.json();
   const decoded = atob(String(data.content || "").replace(/\n/g, ""));
   const bytes = Uint8Array.from(decoded, c => c.charCodeAt(0));
-  return { ok: true, exists: true, sha: data.sha, content: new TextDecoder().decode(bytes), data };
+  return { ok: true, exists: true, sha: data.sha, content: new TextDecoder().decode(bytes) };
 }
 
 async function githubPutFile(env, path, content, message, createBackup) {
   if (!env.GITHUB_TOKEN) return { ok: false, status: 503, error: "GITHUB_TOKEN is not configured in Cloudflare." };
   const current = await githubGetFile(env, path);
   if (!current.ok) return current;
-
   if (createBackup && current.exists && current.content !== content) {
     const safeName = path.substring(path.lastIndexOf("/") + 1).replace(/[^A-Za-z0-9._-]/g, "_");
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -147,32 +151,28 @@ async function githubPutFile(env, path, content, message, createBackup) {
     });
     const backupData = await backupResponse.json().catch(() => ({}));
     if (!backupResponse.ok) return { ok: false, status: 502, error: "Backup failed. The content was not changed." };
-    const backupCommit = backupData.commit && backupData.commit.sha ? backupData.commit.sha : null;
-    const body = { message, content: toBase64Utf8(content), branch: GITHUB_BRANCH };
-    if (current.exists) body.sha = current.sha;
+    const body = { message, content: toBase64Utf8(content), branch: GITHUB_BRANCH, sha: current.sha };
     const response = await fetch(githubUrl(path), { method: "PUT", headers: { ...githubHeaders(env), "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) return { ok: false, status: response.status, error: data.message || "GitHub write failed." };
-    return { ok: true, commit: data.commit && data.commit.sha ? data.commit.sha : null, contentSha: data.content && data.content.sha ? data.content.sha : null, backup: backupPath, backupCommit };
+    return { ok: true, commit: data.commit?.sha || null, contentSha: data.content?.sha || null, backup: backupPath, backupCommit: backupData.commit?.sha || null };
   }
-
   const body = { message, content: toBase64Utf8(content), branch: GITHUB_BRANCH };
   if (current.exists) body.sha = current.sha;
   const response = await fetch(githubUrl(path), { method: "PUT", headers: { ...githubHeaders(env), "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) return { ok: false, status: response.status, error: data.message || "GitHub write failed." };
-  return { ok: true, commit: data.commit && data.commit.sha ? data.commit.sha : null, contentSha: data.content && data.content.sha ? data.content.sha : null, backup: null };
+  return { ok: true, commit: data.commit?.sha || null, contentSha: data.content?.sha || null, backup: null };
 }
 
 async function githubDeleteFile(env, path) {
-  if (!env.GITHUB_TOKEN) return { ok: false, status: 503, error: "GITHUB_TOKEN is not configured in Cloudflare." };
   const current = await githubGetFile(env, path);
   if (!current.ok) return current;
   if (!current.exists) return { ok: true, deleted: false };
   const response = await fetch(githubUrl(path), { method: "DELETE", headers: { ...githubHeaders(env), "Content-Type": "application/json" }, body: JSON.stringify({ message: "CMS delete " + path, sha: current.sha, branch: GITHUB_BRANCH }) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) return { ok: false, status: response.status, error: data.message || "GitHub delete failed." };
-  return { ok: true, deleted: true, commit: data.commit && data.commit.sha ? data.commit.sha : null };
+  return { ok: true, deleted: true, commit: data.commit?.sha || null };
 }
 
 async function handleLogin(request, env) {
@@ -194,7 +194,7 @@ async function handleMe(request, env) {
   return json({ authenticated: true, username: session.sub, expiresAt: session.exp });
 }
 
-async function handleLogout() {
+function handleLogout() {
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "Set-Cookie": expiredSessionCookie(), "X-Zeta-Worker-Version": WORKER_VERSION } });
 }
 
@@ -214,7 +214,7 @@ async function handleContent(request, env, path) {
   const payload = Object.prototype.hasOwnProperty.call(body, "data") ? body.data : body;
   if (payload === undefined) return json({ ok: false, error: "Missing data." }, 400);
   const content = JSON.stringify(payload, null, 2) + "\n";
-  if (content.length > 2 * 1024 * 1024) return json({ ok: false, error: "Content is too large." }, 413);
+  if (content.length > MAX_JSON_BYTES) return json({ ok: false, error: "Content is too large." }, 413);
   const result = await githubPutFile(env, path, content, "CMS update " + path, true);
   if (!result.ok) return json({ ok: false, error: result.error }, result.status);
   return json({ ok: true, commit: result.commit, contentSha: result.contentSha, backup: result.backup || null });
@@ -231,19 +231,13 @@ async function handleUpload(request, env) {
   const data = String(body.data || "");
   if (!name || !data) return json({ ok: false, error: "File name and data are required." }, 400);
   const allowedMime = ["image/png", "image/jpeg", "image/webp", "image/svg+xml", "application/pdf"];
-  const extensionAllowed = /\.(png|jpe?g|webp|svg|pdf)$/i.test(name);
-  if (!allowedMime.includes(mime) || !extensionAllowed) return json({ ok: false, error: "Only PNG, JPG, WEBP, SVG and PDF files are allowed." }, 415);
-  const rawSize = Math.floor(data.length * 3 / 4);
-  if (rawSize > MAX_UPLOAD_BYTES) return json({ ok: false, error: "Maximum upload size is 10 MB." }, 413);
+  if (!allowedMime.includes(mime) || !/\.(png|jpe?g|webp|svg|pdf)$/i.test(name)) return json({ ok: false, error: "Only PNG, JPG, WEBP, SVG and PDF files are allowed." }, 415);
+  if (Math.floor(data.length * 3 / 4) > MAX_UPLOAD_BYTES) return json({ ok: false, error: "Maximum upload size is 10 MB." }, 413);
   const path = "assets/uploads/" + Date.now() + "-" + name;
-  if (!isAllowedUploadPath(path)) return json({ ok: false, error: "Invalid upload path." }, 400);
-  if (!env.GITHUB_TOKEN) return json({ ok: false, error: "GITHUB_TOKEN is not configured in Cloudflare." }, 503);
-  const current = await githubGetFile(env, path);
-  if (!current.ok) return json({ ok: false, error: current.error }, current.status);
   const response = await fetch(githubUrl(path), { method: "PUT", headers: { ...githubHeaders(env), "Content-Type": "application/json" }, body: JSON.stringify({ message: "CMS upload " + name, content: data, branch: GITHUB_BRANCH }) });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) return json({ ok: false, error: result.message || "GitHub upload failed." }, response.status);
-  return json({ ok: true, path, url: "/" + path, commit: result.commit && result.commit.sha ? result.commit.sha : null });
+  return json({ ok: true, path, url: "/" + path, commit: result.commit?.sha || null });
 }
 
 async function handleDeleteFile(request, env) {
@@ -256,105 +250,74 @@ async function handleDeleteFile(request, env) {
   return json(result);
 }
 
-function adminEnhancementResponse(response) {
-  const script = `
-<style>
-#zetaAdminLoader{position:fixed;inset:0;background:rgba(7,27,43,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:99999;opacity:1;transition:opacity .2s ease}
-#zetaAdminLoader.zeta-hidden{opacity:0;pointer-events:none}
-#zetaAdminLoader .zeta-loader-card{background:#fff;border-radius:18px;padding:24px 30px;min-width:220px;text-align:center;box-shadow:0 20px 60px #0004;color:#071b2b;font-weight:800}
-#zetaAdminLoader .zeta-spinner{width:38px;height:38px;border:4px solid #d9e7e8;border-top-color:#0b7773;border-radius:50%;margin:0 auto 13px;animation:zetaSpin .8s linear infinite}
-@keyframes zetaSpin{to{transform:rotate(360deg)}}
-#zetaAdminToast{position:fixed;left:22px;bottom:22px;z-index:100000;display:flex;flex-direction:column;gap:9px;max-width:min(420px,calc(100vw - 44px))}
-.zeta-toast{padding:13px 16px;border-radius:12px;background:#071b2b;color:#fff;box-shadow:0 12px 30px #0003;font-weight:700;line-height:1.5;animation:zetaToastIn .2s ease}
-.zeta-toast.ok{background:#18794e}.zeta-toast.err{background:#b42318}
-@keyframes zetaToastIn{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
-</style>
-<div id="zetaAdminLoader"><div class="zeta-loader-card"><div class="zeta-spinner"></div><div id="zetaAdminLoaderText">جارٍ التحميل...</div></div></div>
-<div id="zetaAdminToast"></div>
-<script>
-(function(){
-  var loader;
-  var active=0;
-  var hideTimer;
-  function ensure(){
-    loader=document.getElementById('zetaAdminLoader');
-    return loader;
-  }
-  function show(text){
-    var el=ensure();
-    if(!el)return;
-    clearTimeout(hideTimer);
-    var label=document.getElementById('zetaAdminLoaderText');
-    if(label)label.textContent=text||'جارٍ التنفيذ...';
-    el.classList.remove('zeta-hidden');
-  }
-  function hide(){
-    var el=ensure();
-    if(!el)return;
-    clearTimeout(hideTimer);
-    hideTimer=setTimeout(function(){if(active<=0)el.classList.add('zeta-hidden')},120);
-  }
-  function toast(text,ok){
-    if(!text)return;
-    var box=document.getElementById('zetaAdminToast');
-    if(!box)return;
-    var item=document.createElement('div');
-    item.className='zeta-toast '+(ok?'ok':'err');
-    item.textContent=text;
-    box.appendChild(item);
-    setTimeout(function(){item.style.opacity='0';item.style.transition='opacity .2s';setTimeout(function(){item.remove()},220)},4200);
-  }
-  function requestLabel(method){return String(method||'GET').toUpperCase()==='GET'?'جارٍ تحميل البيانات...':'جارٍ حفظ التغييرات...'}
-  var originalFetch=window.fetch;
-  window.fetch=function(input,init){
-    var method=(init&&init.method)||((input&&input.method)||'GET');
-    var isAdmin=typeof input==='string' ? input.indexOf('/api/admin/')===0 : input&&input.url&&input.url.indexOf('/api/admin/')!==-1;
-    if(!isAdmin)return originalFetch.apply(this,arguments);
-    active++;
-    show(requestLabel(method));
-    return originalFetch.apply(this,arguments).then(function(response){
-      var clone=response.clone();
-      var m=String(method).toUpperCase();
-      if(m!=='GET'){
-        clone.json().then(function(data){
-          if(response.ok&&data&&data.ok!==false)toast('تم تنفيذ العملية بنجاح',true);
-          else toast((data&&data.error)||'حدث خطأ أثناء تنفيذ العملية',false);
-        }).catch(function(){
-          if(!response.ok)toast('حدث خطأ أثناء تنفيذ العملية',false);
-        });
-      }
-      return response;
-    }).catch(function(error){
-      toast(error&&error.message?error.message:'تعذر الاتصال بالخادم',false);
-      throw error;
-    }).finally(function(){
-      active--;
-      if(active<=0)hide();
-    });
-  };
-  window.addEventListener('load',function(){setTimeout(function(){if(active<=0)hide()},350)});
-  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){if(active<=0)hide()},600)});
-})();
-</script>`;
-  return new HTMLRewriter().on("head", { element(element) { element.append(script, { html: true }); } }).transform(response);
+async function handlePublicLead(request, env) {
+  if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
+  let body;
+  try { body = await request.json(); } catch { return json({ ok: false, error: "Invalid JSON." }, 400); }
+  const lead = { id: crypto.randomUUID(), date: new Date().toISOString(), status: "New", name: String(body.name || "").trim().slice(0,120), company: String(body.company || "").trim().slice(0,160), email: String(body.email || "").trim().slice(0,180), phone: String(body.phone || "").trim().slice(0,80), subject: String(body.subject || "").trim().slice(0,180), message: String(body.message || "").trim().slice(0,4000), lang: String(body.lang || "ar").slice(0,5) };
+  if (!lead.name || !lead.message) return json({ ok: false, error: "Name and message are required." }, 400);
+  const current = await githubGetFile(env, "content/leads.json");
+  if (!current.ok) return json({ ok: false, error: current.error }, current.status);
+  let data = { leads: [] };
+  if (current.exists) { try { data = JSON.parse(current.content); } catch {} }
+  if (!Array.isArray(data.leads)) data.leads = [];
+  data.leads.unshift(lead);
+  data.leads = data.leads.slice(0, 1000);
+  const result = await githubPutFile(env, "content/leads.json", JSON.stringify(data, null, 2) + "\n", "New website contact lead", false);
+  if (!result.ok) return json({ ok: false, error: result.error }, result.status);
+  return json({ ok: true, id: lead.id });
+}
+
+async function handlePublicAnalytics(request, env) {
+  if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
+  let body;
+  try { body = await request.json(); } catch { return json({ ok: false, error: "Invalid JSON." }, 400); }
+  const type = String(body.type || "page").slice(0,20);
+  const id = String(body.id || body.path || "unknown").slice(0,180).replace(/[^A-Za-z0-9._\/-]/g, "_");
+  const current = await githubGetFile(env, "content/analytics.json");
+  if (!current.ok) return json({ ok: false, error: current.error }, current.status);
+  let data = { pageViews: 0, productViews: {}, newsViews: {}, brochureViews: {} };
+  if (current.exists) { try { data = JSON.parse(current.content); } catch {} }
+  data.productViews = data.productViews || {}; data.newsViews = data.newsViews || {}; data.brochureViews = data.brochureViews || {};
+  if (type === "page") data.pageViews = Number(data.pageViews || 0) + 1;
+  else if (type === "product") data.productViews[id] = Number(data.productViews[id] || 0) + 1;
+  else if (type === "news") data.newsViews[id] = Number(data.newsViews[id] || 0) + 1;
+  else if (type === "brochure") data.brochureViews[id] = Number(data.brochureViews[id] || 0) + 1;
+  const result = await githubPutFile(env, "content/analytics.json", JSON.stringify(data, null, 2) + "\n", "Website analytics update", false);
+  if (!result.ok) return json({ ok: false, error: result.error }, result.status);
+  return json({ ok: true });
+}
+
+async function injectPublicEnhancements(request, response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) return response;
+  const url = new URL(request.url);
+  if (!["/", "/index.html", "/product-details.html", "/news-details.html"].includes(url.pathname)) return response;
+  return new HTMLRewriter().on("body", { element(element) { element.append('<script src="/public-enhancements.js?v=20260904"></script>', { html: true }); } }).transform(response);
+}
+
+async function injectAdminEnhancements(response) {
+  return new HTMLRewriter().on("body", { element(element) { element.append('<script src="/admin/enhancements.js?v=20260904"></script>', { html: true }); } }).transform(response);
 }
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/api/health") return json({ ok: true, worker: "zeta-biotech", version: WORKER_VERSION });
+    if (url.pathname === "/api/leads") return handlePublicLead(request, env);
+    if (url.pathname === "/api/analytics") return handlePublicAnalytics(request, env);
     if (url.pathname === "/api/admin/login") return handleLogin(request, env);
     if (url.pathname === "/api/admin/me") return handleMe(request, env);
     if (url.pathname === "/api/admin/logout") return handleLogout();
     if (url.pathname.startsWith("/api/admin/content/")) return handleContent(request, env, url.pathname.substring("/api/admin/content/".length).replace(/^\/+/, ""));
     if (url.pathname === "/api/admin/upload") return handleUpload(request, env);
     if (url.pathname === "/api/admin/file") return handleDeleteFile(request, env);
-    if (url.pathname === "/admin" || url.pathname === "/admin/") {
+    if (url.pathname === "/admin" || url.pathname === "/admin/" || url.pathname === "/admin/index.html") {
       const session = await requireAdmin(request, env);
       if (!session) return Response.redirect(new URL("/admin/login.html", request.url), 302);
     }
     const assetResponse = await env.ASSETS.fetch(request);
-    if (url.pathname === "/admin/index.html" && request.method === "GET" && assetResponse.ok) return adminEnhancementResponse(assetResponse);
-    return assetResponse;
+    if (url.pathname === "/admin/index.html" && request.method === "GET" && assetResponse.ok) return injectAdminEnhancements(assetResponse);
+    return injectPublicEnhancements(request, assetResponse);
   }
 };
