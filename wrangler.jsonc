@@ -5,6 +5,9 @@
   "compatibility_date": "2026-09-03",
   "workers_dev": true,
   "preview_urls": false,
+  "vars": {
+    "ADMIN_USERNAME": "Saeed"
+  },
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
