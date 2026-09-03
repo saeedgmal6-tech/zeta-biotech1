@@ -1,0 +1,24 @@
+{
+  "company": {
+    "name": "ZETA BIOTECH",
+    "overview": {
+      "ar": "شركة ZETA BIOTECH متخصصة في المنتجات والحلول الحيوية والطبية.",
+      "en": "ZETA BIOTECH specializes in biotechnology and medical products and solutions."
+    },
+    "phone": "",
+    "whatsapp": "",
+    "email": "",
+    "address": {
+      "ar": "",
+      "en": ""
+    },
+    "googleMaps": "",
+    "facebook": "",
+    "instagram": "",
+    "linkedin": "",
+    "footer": {
+      "ar": "ZETA BIOTECH — جميع الحقوق محفوظة.",
+      "en": "ZETA BIOTECH — All rights reserved."
+    }
+  }
+}
