@@ -1,0 +1,14 @@
+{
+  "name": "ZETA BIOTECH",
+  "short_name": "ZETA BIOTECH",
+  "start_url": "/",
+  "display": "standalone",
+  "description": "ZETA BIOTECH — Pharmaceuticals Company",
+  "icons": [
+    {
+      "src": "/assets/zeta-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
