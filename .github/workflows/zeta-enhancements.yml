@@ -14,48 +14,45 @@ jobs:
         with:
           fetch-depth: 0
       - name: Integrate enhancement layers safely
-        shell: python
+        shell: python {0}
         run: |
           from pathlib import Path
-          import re
+          import subprocess
 
           def inject(path, tag):
-              p=Path(path)
-              if not p.exists(): return False
-              s=p.read_text(encoding='utf-8')
-              if tag in s: return False
-              marker='</body>'
-              if marker not in s: return False
-              s=s.replace(marker, tag+'\n'+marker, 1)
-              p.write_text(s, encoding='utf-8')
+              p = Path(path)
+              if not p.exists():
+                  return False
+              s = p.read_text(encoding='utf-8')
+              if tag in s or '</body>' not in s:
+                  return False
+              p.write_text(s.replace('</body>', tag + '\n</body>', 1), encoding='utf-8')
               return True
 
-          changed=False
-          changed |= inject('index.html','<script src="/public-enhancements.js?v=20260904" defer></script>')
-          changed |= inject('product-details.html','<script src="/public-enhancements.js?v=20260904" defer></script>')
-          changed |= inject('news-details.html','<script src="/public-enhancements.js?v=20260904" defer></script>')
-          changed |= inject('admin/index.html','<script src="/admin/enhancements.js?v=20260904" defer></script>')
+          changed = False
+          changed |= inject('index.html', '<script src="/public-enhancements.js?v=20260904" defer></script>')
+          changed |= inject('product-details.html', '<script src="/public-enhancements.js?v=20260904" defer></script>')
+          changed |= inject('news-details.html', '<script src="/public-enhancements.js?v=20260904" defer></script>')
+          changed |= inject('admin/index.html', '<script src="/admin/enhancements.js?v=20260904" defer></script>')
 
-          wp=Path('worker.js')
-          w=wp.read_text(encoding='utf-8')
-          old='  "content/news.json"\n]);'
-          new='  "content/news.json",\n  "content/certifications.json",\n  "content/jobs.json",\n  "content/leads.json",\n  "content/analytics.json"\n]);'
-          if old in w and 'content/analytics.json' not in w:
-              w=w.replace(old,new,1); changed=True
+          wp = Path('worker.js')
+          w = wp.read_text(encoding='utf-8')
 
-          marker='async function handleUpload(request, env) {'
-          if 'async function handlePublicLead' not in w and marker in w:
-              helpers=r'''
+          if 'content/analytics.json' not in w:
+              old = '  "content/news.json"\n]);'
+              new = '  "content/news.json",\n  "content/certifications.json",\n  "content/jobs.json",\n  "content/leads.json",\n  "content/analytics.json"\n]);'
+              if old in w:
+                  w = w.replace(old, new, 1)
+                  changed = True
+
+          if 'async function handlePublicLead' not in w:
+              marker = 'async function handleUpload(request, env) {'
+              helpers = r'''
 async function handlePublicLead(request, env) {
   if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
   let body;
   try { body = await request.json(); } catch { return json({ ok: false, error: "Invalid JSON." }, 400); }
-  const lead = {
-    id: crypto.randomUUID(), date: new Date().toISOString(), status: "New",
-    name: String(body.name || "").trim().slice(0,120), company: String(body.company || "").trim().slice(0,160),
-    email: String(body.email || "").trim().slice(0,180), phone: String(body.phone || "").trim().slice(0,80),
-    subject: String(body.subject || "").trim().slice(0,180), message: String(body.message || "").trim().slice(0,4000), lang: String(body.lang || "ar").slice(0,5)
-  };
+  const lead = { id: crypto.randomUUID(), date: new Date().toISOString(), status: "New", name: String(body.name || "").trim().slice(0,120), company: String(body.company || "").trim().slice(0,160), email: String(body.email || "").trim().slice(0,180), phone: String(body.phone || "").trim().slice(0,80), subject: String(body.subject || "").trim().slice(0,180), message: String(body.message || "").trim().slice(0,4000), lang: String(body.lang || "ar").slice(0,5) };
   if (!lead.name || !lead.message) return json({ ok: false, error: "Name and message are required." }, 400);
   const current = await githubGetFile(env, "content/leads.json");
   if (!current.ok) return json({ ok: false, error: current.error }, current.status);
@@ -89,11 +86,13 @@ async function handlePublicAnalytics(request, env) {
 }
 
 '''
-              w=w.replace(marker,helpers+marker,1); changed=True
+              if marker in w:
+                  w = w.replace(marker, helpers + marker, 1)
+                  changed = True
 
-          asset='  return env.ASSETS.fetch(request);'
-          if 'handlePublicLead(request, env)' not in w and asset in w:
-              routes=r'''
+          if 'handlePublicLead(request, env)' not in w:
+              asset = '  return env.ASSETS.fetch(request);'
+              routes = r'''
   if (url.pathname === "/api/leads") return handlePublicLead(request, env);
   if (url.pathname === "/api/analytics") return handlePublicAnalytics(request, env);
   if (url.pathname === "/admin/index.html") {
@@ -101,17 +100,17 @@ async function handlePublicAnalytics(request, env) {
     if (!session) return Response.redirect(new URL("/admin/login.html", url), 302);
   }
 '''
-              w=w.replace(asset,routes+asset,1); changed=True
+              if asset in w:
+                  w = w.replace(asset, routes + asset, 1)
+                  changed = True
 
-          wp.write_text(w,encoding='utf-8')
+          wp.write_text(w, encoding='utf-8')
 
-          if changed:
-              import subprocess
-              subprocess.run(['git','config','user.name','ZETA BIOTECH Automation'],check=True)
-              subprocess.run(['git','config','user.email','actions@zeta-biotech.com'],check=True)
-              subprocess.run(['git','add','index.html','product-details.html','news-details.html','admin/index.html','worker.js'],check=True)
-              subprocess.run(['git','diff','--cached','--quiet'])
-              if subprocess.run(['git','diff','--cached','--quiet']).returncode != 0:
-                  subprocess.run(['git','commit','-m','Integrate ZETA BIOTECH enhancement layers [skip ci]'],check=True)
-                  subprocess.run(['git','push','origin','HEAD:main'],check=True)
+          subprocess.run(['git', 'config', 'user.name', 'ZETA BIOTECH Automation'], check=True)
+          subprocess.run(['git', 'config', 'user.email', 'actions@zeta-biotech.com'], check=True)
+          subprocess.run(['git', 'add', 'index.html', 'product-details.html', 'news-details.html', 'admin/index.html', 'worker.js'], check=True)
+          result = subprocess.run(['git', 'diff', '--cached', '--quiet'])
+          if result.returncode != 0:
+              subprocess.run(['git', 'commit', '-m', 'Integrate ZETA BIOTECH enhancement layers [skip ci]'], check=True)
+              subprocess.run(['git', 'push', 'origin', 'HEAD:main'], check=True)
           print('Integration completed:', changed)
