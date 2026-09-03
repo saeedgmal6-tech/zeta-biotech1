@@ -1,5 +1,6 @@
 const SESSION_COOKIE = "zeta_admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
+const WORKER_VERSION = "runtime-check-2026-09-03-01";
 
 function base64UrlEncode(value) {
   const bytes = value instanceof Uint8Array ? value : new TextEncoder().encode(value);
@@ -97,13 +98,19 @@ async function verifySession(request, secret) {
   }
 }
 
-function json(data, status) {
+function json(data, status, extraHeaders) {
+  const headers = {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store"
+  };
+
+  if (extraHeaders) {
+    Object.assign(headers, extraHeaders);
+  }
+
   return new Response(JSON.stringify(data), {
     status: status || 200,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store"
-    }
+    headers: headers
   });
 }
 
@@ -151,7 +158,8 @@ async function handleLogin(request, env) {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
-      "Set-Cookie": sessionCookie(token)
+      "Set-Cookie": sessionCookie(token),
+      "X-Zeta-Worker-Version": WORKER_VERSION
     }
   });
 }
@@ -159,9 +167,9 @@ async function handleLogin(request, env) {
 async function handleMe(request, env) {
   const session = await verifySession(request, env.SESSION_SECRET);
   if (!session) {
-    return json({ authenticated: false }, 401);
+    return json({ authenticated: false }, 401, { "X-Zeta-Worker-Version": WORKER_VERSION });
   }
-  return json({ authenticated: true, username: session.sub, expiresAt: session.exp });
+  return json({ authenticated: true, username: session.sub, expiresAt: session.exp }, 200, { "X-Zeta-Worker-Version": WORKER_VERSION });
 }
 
 async function handleLogout() {
@@ -170,7 +178,8 @@ async function handleLogout() {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
-      "Set-Cookie": expiredSessionCookie()
+      "Set-Cookie": expiredSessionCookie(),
+      "X-Zeta-Worker-Version": WORKER_VERSION
     }
   });
 }
@@ -178,6 +187,10 @@ async function handleLogout() {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    if (url.pathname === "/api/health") {
+      return json({ ok: true, worker: "zeta-biotech", version: WORKER_VERSION }, 200, { "X-Zeta-Worker-Version": WORKER_VERSION });
+    }
 
     if (url.pathname === "/api/admin/login") {
       return handleLogin(request, env);
