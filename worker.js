@@ -21,13 +21,6 @@ function base64UrlDecode(value) {
   return bytes;
 }
 
-async function sha256Hex(text) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(digest)).map(function (byte) {
-    return byte.toString(16).padStart(2, "0");
-  }).join("");
-}
-
 async function hmac(secret, value) {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -127,7 +120,7 @@ async function handleLogin(request, env) {
     return json({ ok: false, error: "Method not allowed" }, 405);
   }
 
-  if (!env.ADMIN_USERNAME || !env.ADMIN_PASSWORD_HASH || !env.SESSION_SECRET) {
+  if (!env.ADMIN_USERNAME || !env.ADMIN_PASSWORD || !env.SESSION_SECRET) {
     return json({ ok: false, error: "Admin authentication is not configured in Cloudflare yet." }, 503);
   }
 
@@ -145,9 +138,8 @@ async function handleLogin(request, env) {
     return json({ ok: false, error: "Enter your username and password." }, 400);
   }
 
-  const passwordHash = await sha256Hex(password);
   const validUser = constantTimeEqual(username, env.ADMIN_USERNAME);
-  const validPassword = constantTimeEqual(passwordHash, env.ADMIN_PASSWORD_HASH.toLowerCase());
+  const validPassword = constantTimeEqual(password, env.ADMIN_PASSWORD);
 
   if (!validUser || !validPassword) {
     return json({ ok: false, error: "Invalid username or password." }, 401);
