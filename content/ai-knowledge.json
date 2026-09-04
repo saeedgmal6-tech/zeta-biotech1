@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "name": "ZETA BIOTECH AI Knowledge Base",
+  "language": ["ar", "en"],
+  "description": "Configuration and retrieval map for the website AI assistant. Live company and content records are loaded from the published site collections so the assistant stays synchronized with the website.",
+  "sources": [
+    "site",
+    "products",
+    "brochures",
+    "news",
+    "certifications",
+    "jobs",
+    "faqs",
+    "testimonials"
+  ],
+  "rules": [
+    "Answer only from current published ZETA BIOTECH website information.",
+    "Search Arabic and English fields together.",
+    "Normalize Arabic spelling variations before matching.",
+    "Prefer exact product, FAQ, company and contact matches.",
+    "Never invent product specifications, medical claims, prices, registration numbers or company details.",
+    "If no direct match exists, return the closest published topics instead of claiming the whole database is unavailable.",
+    "Refresh the live knowledge periodically so admin content additions become searchable automatically."
+  ],
+  "synonyms": {
+    "واتساب": ["whatsapp", "phone", "هاتف"],
+    "موزع": ["distributor", "distribution", "توزيع", "كن موزعًا"],
+    "وظيفة": ["job", "career", "careers", "توظيف"],
+    "منتج": ["product", "products", "منتجات"],
+    "بروشور": ["brochure", "brochures", "pdf", "resources"],
+    "بريد": ["email", "e-mail"],
+    "خريطة": ["google maps", "maps", "location", "عنوان"]
+  }
+}
