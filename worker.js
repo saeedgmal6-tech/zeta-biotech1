@@ -1,27 +1,381 @@
-const SESSION_COOKIE="zeta_admin_session",SESSION_TTL_SECONDS=28800,WORKER_VERSION="cms-github-2026-09-04-10",OWNER="saeedgmal6-tech",REPO="zeta-biotech1",BRANCH="main",MAX_UPLOAD=10*1024*1024,MAX_JSON=2*1024*1024;
-const CONTENT=new Set(["site","products","brochures","news","certifications","jobs","faqs","leads","analytics","job-applications","activity","testimonials"]);
-const enc=new TextEncoder(),dec=new TextDecoder();
-function b64(v){const b=v instanceof Uint8Array?v:enc.encode(v);let s="";for(let i=0;i<b.length;i+=32768)s+=String.fromCharCode(...b.subarray(i,i+32768));return btoa(s)}
-function ub64(v){const s=atob(v.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-v.length%4)%4)),b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return b}
-async function sign(s,v){const k=await crypto.subtle.importKey("raw",enc.encode(s),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return b64(new Uint8Array(await crypto.subtle.sign("HMAC",k,enc.encode(v)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}
-function eq(a,b){if(a.length!==b.length)return false;let n=0;for(let i=0;i<a.length;i++)n|=a.charCodeAt(i)^b.charCodeAt(i);return n===0}
-function cookie(r,n){for(const x of(r.headers.get("Cookie")||"").split(";")){const z=x.trim(),p=z.indexOf("=");if(p>0&&z.slice(0,p)===n)return decodeURIComponent(z.slice(p+1))}return null}
-async function session(r,e){const t=cookie(r,SESSION_COOKIE);if(!t||!e.SESSION_SECRET)return null;const p=t.split(".");if(p.length!==2||!eq(p[1],await sign(e.SESSION_SECRET,p[0])))return null;try{const x=JSON.parse(dec.decode(ub64(p[0])));return x.exp>=Date.now()/1000?x:null}catch{return null}}
-function out(d,s=200,h={}){return new Response(JSON.stringify(d),{status:s,headers:{"Content-Type":"application/json;charset=utf-8","Cache-Control":"no-store","X-Zeta-Worker-Version":WORKER_VERSION,...h}})}
-function gh(p){return "https://api.github.com/repos/"+OWNER+"/"+REPO+"/contents/"+p.split("/").map(encodeURIComponent).join("/")}
-function ghh(e){return {Authorization:"Bearer "+e.GITHUB_TOKEN,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","User-Agent":"Zeta-Biotech-CMS"}}
-function pname(p){p=String(p||"").replace(/^\/+/,"").replace(/^content\//,"").replace(/\.json$/i,"");return CONTENT.has(p)?p:null}
-async function getf(e,p){const r=await fetch(gh(p)+"?ref="+BRANCH,{headers:ghh(e)});if(r.status===404)return{exists:false};if(!r.ok)return{error:"GitHub read failed.",status:r.status};const d=await r.json();return{exists:true,sha:d.sha,text:dec.decode(ub64(String(d.content||"").replace(/\n/g,"")))}}
-async function log(e,x){const c=await getf(e,"content/activity.json");if(c.error||!c.exists)return c.error?c:{ok:true};let d={events:[]};try{d=JSON.parse(c.text)}catch{}if(!Array.isArray(d.events))d.events=[];d.events.unshift(x);d.events=d.events.slice(0,500);return putf(e,"content/activity.json",JSON.stringify(d,null,2)+"\n","Activity log",false,false)}
-async function putf(e,p,text,msg,backup=false,logging=true){const c=await getf(e,p);if(c.error)return c;if(backup&&c.exists&&c.text!==text){const bp="content/backups/"+new Date().toISOString().replace(/[:.]/g,"-")+"-"+p.split("/").pop();const z=await fetch(gh(bp),{method:"PUT",headers:{...ghh(e),"Content-Type":"application/json"},body:JSON.stringify({message:"CMS backup before update "+p,content:b64(c.text),branch:BRANCH})});if(!z.ok)return{error:"Backup failed. The content was not changed.",status:502}}const body={message:msg,content:b64(text),branch:BRANCH};if(c.exists)body.sha=c.sha;const r=await fetch(gh(p),{method:"PUT",headers:{...ghh(e),"Content-Type":"application/json"},body:JSON.stringify(body)}),d=await r.json().catch(()=>({}));if(!r.ok)return{error:d.message||"GitHub write failed.",status:r.status};if(logging&&p!=="content/activity.json")await log(e,{action:"update",path:p,at:new Date().toISOString()});return{ok:true,commit:d.commit?.sha||null}}
-async function sendEmail(e,subject,text){if(!e.RESEND_API_KEY)return{ok:false,skipped:true};let email="";try{const c=await getf(e,"content/site.json");if(c.exists){const s=JSON.parse(c.text);if(s.company?.emailAlerts===false)return{ok:false,disabled:true};email=String(s.company?.notificationEmail||s.company?.email||"").trim()}}catch{}if(!email)return{ok:false,noRecipient:true};const r=await fetch("https://api.resend.com/emails",{method:"POST",headers:{Authorization:"Bearer "+e.RESEND_API_KEY,"Content-Type":"application/json"},body:JSON.stringify({from:String(e.EMAIL_FROM||"ZETA BIOTECH <onboarding@resend.dev>"),to:[email],subject,text})});return r.ok?{ok:true}:{ok:false,status:r.status}}
-async function postCollection(r,e,file,key,make){if(r.method!=="POST")return out({ok:false,error:"Method not allowed"},405);let b;try{b=await r.json()}catch{return out({ok:false,error:"Invalid request."},400)}const x=make(b);if(x.error)return out({ok:false,error:x.error},400);const c=await getf(e,file);if(c.error)return out({ok:false,error:c.error},c.status);let d={[key]:[]};if(c.exists)try{d=JSON.parse(c.text)}catch{}if(!Array.isArray(d[key]))d[key]=[];d[key].unshift(x.value);d[key]=d[key].slice(0,1000);const z=await putf(e,file,JSON.stringify(d,null,2)+"\n",x.message||"Website submission",false,true);if(z.ok&&x.emailSubject)sendEmail(e,x.emailSubject,x.emailText||JSON.stringify(x.value,null,2)).catch(()=>{});return z.ok?out({ok:true,id:x.value.id}):out({ok:false,error:z.error},z.status)}
-async function lead(r,e){return postCollection(r,e,"content/leads.json","leads",b=>{const x={id:crypto.randomUUID(),date:new Date().toISOString(),status:"New",name:String(b.name||"").trim().slice(0,120),company:String(b.company||"").trim().slice(0,160),email:String(b.email||"").trim().slice(0,180),phone:String(b.phone||"").trim().slice(0,80),subject:String(b.subject||"").trim().slice(0,180),message:String(b.message||"").trim().slice(0,4000),lang:String(b.lang||"ar").slice(0,5)};return !x.name||!x.message?{error:"Name and message are required."}:{value:x,message:"New website contact lead",emailSubject:"ZETA BIOTECH — New Lead: "+x.subject,emailText:"New website lead\n\nName: "+x.name+"\nCompany: "+x.company+"\nEmail: "+x.email+"\nPhone: "+x.phone+"\nSubject: "+x.subject+"\n\n"+x.message}})}
-async function jobApplication(r,e){return postCollection(r,e,"content/job-applications.json","applications",b=>{const x={id:crypto.randomUUID(),date:new Date().toISOString(),status:"New",jobId:String(b.jobId||"").slice(0,120),jobTitle:String(b.jobTitle||"").slice(0,180),name:String(b.name||"").trim().slice(0,120),email:String(b.email||"").trim().slice(0,180),phone:String(b.phone||"").trim().slice(0,80),message:String(b.message||"").trim().slice(0,3000),cvUrl:String(b.cvUrl||"").trim().slice(0,500)};return !x.name||!x.email||!x.jobTitle?{error:"Name, email and job title are required."}:{value:x,message:"New job application",emailSubject:"ZETA BIOTECH — New Job Application: "+x.jobTitle,emailText:"New job application\n\nName: "+x.name+"\nEmail: "+x.email+"\nPhone: "+x.phone+"\nJob: "+x.jobTitle+"\nCV: "+x.cvUrl+"\n\n"+x.message}})}
-async function analytics(r,e){if(r.method!=="POST")return out({ok:false,error:"Method not allowed"},405);let b;try{b=await r.json()}catch{return out({ok:false,error:"Invalid JSON."},400)}const type=String(b.type||"page").slice(0,20),id=String(b.id||b.path||"unknown").slice(0,180).replace(/[^A-Za-z0-9._\/-]/g,"_");const c=await getf(e,"content/analytics.json");if(c.error)return out({ok:false,error:c.error},c.status);let d={pageViews:0,productViews:{},newsViews:{},brochureViews:{}};if(c.exists)try{d=JSON.parse(c.text)}catch{}d.productViews=d.productViews||{};d.newsViews=d.newsViews||{};d.brochureViews=d.brochureViews||{};if(type==="page")d.pageViews=Number(d.pageViews||0)+1;else if(type==="product")d.productViews[id]=Number(d.productViews[id]||0)+1;else if(type==="news")d.newsViews[id]=Number(d.newsViews[id]||0)+1;else if(type==="brochure")d.brochureViews[id]=Number(d.brochureViews[id]||0)+1;const z=await putf(e,"content/analytics.json",JSON.stringify(d,null,2)+"\n","Website analytics update",false,true);return z.ok?out({ok:true}):out({ok:false,error:z.error},z.status)}
-async function adminContent(r,e,p){const n=pname(p);if(!n)return out({ok:false,error:"Invalid content path."},400);if(!await session(r,e))return out({ok:false,error:"Unauthorized"},401);const path="content/"+n+".json";if(r.method==="GET"){const x=await getf(e,path);if(x.error)return out({ok:false,error:x.error},x.status);if(!x.exists)return out({ok:true,data:null});try{return out({ok:true,data:JSON.parse(x.text)})}catch{return out({ok:false,error:"Stored JSON is invalid."},500)}}if(r.method!=="PUT")return out({ok:false,error:"Method not allowed"},405);let b;try{b=await r.json()}catch{return out({ok:false,error:"Invalid JSON."},400)}const text=JSON.stringify(Object.prototype.hasOwnProperty.call(b,"data")?b.data:b,null,2)+"\n";if(text.length>MAX_JSON)return out({ok:false,error:"Content is too large."},413);const x=await putf(e,path,text,"CMS update "+path,true,true);return x.ok?out(x):out({ok:false,error:x.error},x.status)}
-async function login(r,e){if(r.method!=="POST")return out({ok:false,error:"Method not allowed"},405);let b;try{b=await r.json()}catch{return out({ok:false,error:"Invalid request."},400)}const missing=[];if(!e.ADMIN_USERNAME)missing.push("ADMIN_USERNAME");if(!e.ADMIN_PASSWORD)missing.push("ADMIN_PASSWORD");if(!e.SESSION_SECRET)missing.push("SESSION_SECRET");if(missing.length)return out({ok:false,error:"Admin authentication is not configured in Cloudflare yet.",missing},503);if(!eq(String(b.username||"").trim(),e.ADMIN_USERNAME)||!eq(String(b.password||""),e.ADMIN_PASSWORD))return out({ok:false,error:"Invalid username or password."},401);const p=b64(JSON.stringify({sub:e.ADMIN_USERNAME,exp:Math.floor(Date.now()/1000)+SESSION_TTL_SECONDS})).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,""),t=p+"."+await sign(e.SESSION_SECRET,p);return out({ok:true},200,{"Set-Cookie":SESSION_COOKIE+"="+encodeURIComponent(t)+"; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age="+SESSION_TTL_SECONDS})}
-async function upload(r,e){if(!await session(r,e))return out({ok:false,error:"Unauthorized"},401);let b;try{b=await r.json()}catch{return out({ok:false,error:"Invalid JSON."},400)}const n=String(b.name||"").trim().replace(/[^A-Za-z0-9._-]/g,"_"),m=String(b.mime||"").toLowerCase(),data=String(b.data||"");if(!n||!data)return out({ok:false,error:"File name and data are required."},400);if(!["image/png","image/jpeg","image/webp","image/svg+xml","application/pdf"].includes(m)||!/\.(png|jpe?g|webp|svg|pdf)$/i.test(n))return out({ok:false,error:"Only PNG, JPG, WEBP, SVG and PDF files are allowed."},415);if(data.length*.75>MAX_UPLOAD)return out({ok:false,error:"Maximum upload size is 10 MB."},413);const p="assets/uploads/"+Date.now()+"-"+n,z=await fetch(gh(p),{method:"PUT",headers:{...ghh(e),"Content-Type":"application/json"},body:JSON.stringify({message:"CMS upload "+n,content:data,branch:BRANCH})}),d=await z.json().catch(()=>({}));if(!z.ok)return out({ok:false,error:d.message||"GitHub upload failed."},z.status);await log(e,{action:"upload",path:p,at:new Date().toISOString()});return out({ok:true,path:p,url:"/"+p})}
-async function del(r,e){if(!await session(r,e))return out({ok:false,error:"Unauthorized"},401);const p=new URL(r.url).searchParams.get("path")||"";if(!/^assets\/uploads\/[A-Za-z0-9._-]+$/.test(p))return out({ok:false,error:"Invalid file path."},400);const c=await getf(e,p);if(c.error)return out({ok:false,error:c.error},c.status);if(!c.exists)return out({ok:true,deleted:false});const z=await fetch(gh(p),{method:"DELETE",headers:{...ghh(e),"Content-Type":"application/json"},body:JSON.stringify({message:"CMS delete "+p,sha:c.sha,branch:BRANCH})});if(!z.ok)return out({ok:false,error:"GitHub delete failed."},z.status);await log(e,{action:"delete",path:p,at:new Date().toISOString()});return out({ok:true,deleted:true})}
-async function serve(r,e){const x=await e.ASSETS.fetch(r),t=x.headers.get("content-type")||"";if(!t.includes("text/html"))return x;let h=await x.text(),p=new URL(r.url).pathname,tag="?v="+WORKER_VERSION,scripts="<script src=\"/public-enhancements.js"+tag+\"></script><script src=\"/public-features.js"+tag+\"></script><script src=\"/public-next.js"+tag+\"></script>";if(p==="/admin"||p==="/admin/"||p==="/admin/index.html")scripts="<script src=\"/admin/enhancements.js"+tag+\"></script><script src=\"/admin/features.js"+tag+\"></script><script src=\"/admin/next-features.js"+tag+\"></script>";if(p==="/admin"||p==="/admin/"||p==="/admin/index.html"||p==="/"||p.endsWith(".html"))h=h.replace(/<\/body>/i,scripts+"</body>");return new Response(h,{status:x.status,headers:x.headers})}
-export default{async fetch(r,e){const u=new URL(r.url);if(u.pathname==="/api/health")return out({ok:true,worker:"zeta-biotech",version:WORKER_VERSION,repo:REPO,bindings:{ADMIN_USERNAME:!!e.ADMIN_USERNAME,ADMIN_PASSWORD:!!e.ADMIN_PASSWORD,GITHUB_TOKEN:!!e.GITHUB_TOKEN,SESSION_SECRET:!!e.SESSION_SECRET,RESEND_API_KEY:!!e.RESEND_API_KEY}});if(u.pathname==="/api/leads")return lead(r,e);if(u.pathname==="/api/job-applications")return jobApplication(r,e);if(u.pathname==="/api/analytics")return analytics(r,e);if(u.pathname==="/api/admin/login")return login(r,e);if(u.pathname==="/api/admin/me"){const s=await session(r,e);return s?out({authenticated:true,username:s.sub}):out({authenticated:false},401)}if(u.pathname==="/api/admin/logout")return out({ok:true},200,{"Set-Cookie":SESSION_COOKIE+"=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0"});if(u.pathname.startsWith("/api/admin/content/"))return adminContent(r,e,u.pathname.slice("/api/admin/content/".length));if(u.pathname==="/api/admin/upload")return upload(r,e);if(u.pathname==="/api/admin/media/delete")return del(r,e);return serve(r,e)}};
+const SESSION_COOKIE = "zeta_admin_session";
+const SESSION_TTL_SECONDS = 28800;
+const WORKER_VERSION = "cms-github-2026-09-04-11";
+const OWNER = "saeedgmal6-tech";
+const REPO = "zeta-biotech1";
+const BRANCH = "main";
+const MAX_UPLOAD = 10 * 1024 * 1024;
+const MAX_JSON = 2 * 1024 * 1024;
+const CONTENT = new Set(["site", "products", "brochures", "news", "certifications", "jobs", "faqs", "leads", "analytics", "job-applications", "activity", "testimonials"]);
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+
+function b64(value) {
+  const bytes = value instanceof Uint8Array ? value : enc.encode(value);
+  let result = "";
+  for (let i = 0; i < bytes.length; i += 32768) {
+    result += String.fromCharCode(...bytes.subarray(i, i + 32768));
+  }
+  return btoa(result);
+}
+
+function ub64(value) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - value.length % 4) % 4);
+  const binary = atob(normalized);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function sign(secret, value) {
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return b64(new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(value))))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function eq(a, b) {
+  if (a.length !== b.length) return false;
+  let n = 0;
+  for (let i = 0; i < a.length; i++) n |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return n === 0;
+}
+
+function cookie(request, name) {
+  for (const item of (request.headers.get("Cookie") || "").split(";")) {
+    const value = item.trim();
+    const pos = value.indexOf("=");
+    if (pos > 0 && value.slice(0, pos) === name) return decodeURIComponent(value.slice(pos + 1));
+  }
+  return null;
+}
+
+async function session(request, env) {
+  const token = cookie(request, SESSION_COOKIE);
+  if (!token || !env.SESSION_SECRET) return null;
+  const parts = token.split(".");
+  if (parts.length !== 2 || !eq(parts[1], await sign(env.SESSION_SECRET, parts[0]))) return null;
+  try {
+    const data = JSON.parse(dec.decode(ub64(parts[0])));
+    return data.exp >= Date.now() / 1000 ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+function out(data, status = 200, headers = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "Content-Type": "application/json;charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Zeta-Worker-Version": WORKER_VERSION,
+      ...headers
+    }
+  });
+}
+
+function gh(path) {
+  return "https://api.github.com/repos/" + OWNER + "/" + REPO + "/contents/" + path.split("/").map(encodeURIComponent).join("/");
+}
+
+function ghh(env) {
+  return {
+    Authorization: "Bearer " + env.GITHUB_TOKEN,
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "Zeta-Biotech-CMS"
+  };
+}
+
+function pname(path) {
+  path = String(path || "").replace(/^\/+/, "").replace(/^content\//, "").replace(/\.json$/i, "");
+  return CONTENT.has(path) ? path : null;
+}
+
+async function getf(env, path) {
+  const response = await fetch(gh(path) + "?ref=" + BRANCH, { headers: ghh(env) });
+  if (response.status === 404) return { exists: false };
+  if (!response.ok) return { error: "GitHub read failed.", status: response.status };
+  const data = await response.json();
+  return { exists: true, sha: data.sha, text: dec.decode(ub64(String(data.content || "").replace(/\n/g, ""))) };
+}
+
+async function log(env, event) {
+  const current = await getf(env, "content/activity.json");
+  if (current.error || !current.exists) return current.error ? current : { ok: true };
+  let data = { events: [] };
+  try { data = JSON.parse(current.text); } catch {}
+  if (!Array.isArray(data.events)) data.events = [];
+  data.events.unshift(event);
+  data.events = data.events.slice(0, 500);
+  return putf(env, "content/activity.json", JSON.stringify(data, null, 2) + "\n", "Activity log", false, false);
+}
+
+async function putf(env, path, text, message, backup = false, logging = true) {
+  const current = await getf(env, path);
+  if (current.error) return current;
+
+  if (backup && current.exists && current.text !== text) {
+    const backupPath = "content/backups/" + new Date().toISOString().replace(/[:.]/g, "-") + "-" + path.split("/").pop();
+    const backupResponse = await fetch(gh(backupPath), {
+      method: "PUT",
+      headers: { ...ghh(env), "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "CMS backup before update " + path, content: b64(current.text), branch: BRANCH })
+    });
+    if (!backupResponse.ok) return { error: "Backup failed. The content was not changed.", status: 502 };
+  }
+
+  const body = { message, content: b64(text), branch: BRANCH };
+  if (current.exists) body.sha = current.sha;
+  const response = await fetch(gh(path), {
+    method: "PUT",
+    headers: { ...ghh(env), "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) return { error: data.message || "GitHub write failed.", status: response.status };
+  if (logging && path !== "content/activity.json") await log(env, { action: "update", path, at: new Date().toISOString() });
+  return { ok: true, commit: data.commit?.sha || null };
+}
+
+async function sendEmail(env, subject, text) {
+  if (!env.RESEND_API_KEY) return { ok: false, skipped: true };
+  let recipient = "";
+  try {
+    const current = await getf(env, "content/site.json");
+    if (current.exists) {
+      const site = JSON.parse(current.text);
+      if (site.company?.emailAlerts === false) return { ok: false, disabled: true };
+      recipient = String(site.company?.notificationEmail || site.company?.email || "").trim();
+    }
+  } catch {}
+  if (!recipient) return { ok: false, noRecipient: true };
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: String(env.EMAIL_FROM || "ZETA BIOTECH <onboarding@resend.dev>"),
+      to: [recipient],
+      subject,
+      text
+    })
+  });
+  return response.ok ? { ok: true } : { ok: false, status: response.status };
+}
+
+async function postCollection(request, env, file, key, make) {
+  if (request.method !== "POST") return out({ ok: false, error: "Method not allowed" }, 405);
+  let body;
+  try { body = await request.json(); } catch { return out({ ok: false, error: "Invalid request." }, 400); }
+  const item = make(body);
+  if (item.error) return out({ ok: false, error: item.error }, 400);
+  const current = await getf(env, file);
+  if (current.error) return out({ ok: false, error: current.error }, current.status);
+  let data = { [key]: [] };
+  if (current.exists) try { data = JSON.parse(current.text); } catch {}
+  if (!Array.isArray(data[key])) data[key] = [];
+  data[key].unshift(item.value);
+  data[key] = data[key].slice(0, 1000);
+  const saved = await putf(env, file, JSON.stringify(data, null, 2) + "\n", item.message || "Website submission", false, true);
+  if (saved.ok && item.emailSubject) sendEmail(env, item.emailSubject, item.emailText || JSON.stringify(item.value, null, 2)).catch(() => {});
+  return saved.ok ? out({ ok: true, id: item.value.id }) : out({ ok: false, error: saved.error }, saved.status);
+}
+
+async function lead(request, env) {
+  return postCollection(request, env, "content/leads.json", "leads", body => {
+    const item = {
+      id: crypto.randomUUID(), date: new Date().toISOString(), status: "New",
+      name: String(body.name || "").trim().slice(0, 120), company: String(body.company || "").trim().slice(0, 160),
+      email: String(body.email || "").trim().slice(0, 180), phone: String(body.phone || "").trim().slice(0, 80),
+      subject: String(body.subject || "").trim().slice(0, 180), message: String(body.message || "").trim().slice(0, 4000),
+      lang: String(body.lang || "ar").slice(0, 5)
+    };
+    return !item.name || !item.message ? { error: "Name and message are required." } : {
+      value: item,
+      message: "New website contact lead",
+      emailSubject: "ZETA BIOTECH — New Lead: " + item.subject,
+      emailText: "New website lead\n\nName: " + item.name + "\nCompany: " + item.company + "\nEmail: " + item.email + "\nPhone: " + item.phone + "\nSubject: " + item.subject + "\n\n" + item.message
+    };
+  });
+}
+
+async function jobApplication(request, env) {
+  return postCollection(request, env, "content/job-applications.json", "applications", body => {
+    const item = {
+      id: crypto.randomUUID(), date: new Date().toISOString(), status: "New",
+      jobId: String(body.jobId || "").slice(0, 120), jobTitle: String(body.jobTitle || "").slice(0, 180),
+      name: String(body.name || "").trim().slice(0, 120), email: String(body.email || "").trim().slice(0, 180),
+      phone: String(body.phone || "").trim().slice(0, 80), message: String(body.message || "").trim().slice(0, 3000),
+      cvUrl: String(body.cvUrl || "").trim().slice(0, 500)
+    };
+    return !item.name || !item.email || !item.jobTitle ? { error: "Name, email and job title are required." } : {
+      value: item,
+      message: "New job application",
+      emailSubject: "ZETA BIOTECH — New Job Application: " + item.jobTitle,
+      emailText: "New job application\n\nName: " + item.name + "\nEmail: " + item.email + "\nPhone: " + item.phone + "\nJob: " + item.jobTitle + "\nCV: " + item.cvUrl + "\n\n" + item.message
+    };
+  });
+}
+
+async function analytics(request, env) {
+  if (request.method !== "POST") return out({ ok: false, error: "Method not allowed" }, 405);
+  let body;
+  try { body = await request.json(); } catch { return out({ ok: false, error: "Invalid JSON." }, 400); }
+  const type = String(body.type || "page").slice(0, 20);
+  const id = String(body.id || body.path || "unknown").slice(0, 180).replace(/[^A-Za-z0-9._\/-]/g, "_");
+  const current = await getf(env, "content/analytics.json");
+  if (current.error) return out({ ok: false, error: current.error }, current.status);
+  let data = { pageViews: 0, productViews: {}, newsViews: {}, brochureViews: {} };
+  if (current.exists) try { data = JSON.parse(current.text); } catch {}
+  data.productViews = data.productViews || {};
+  data.newsViews = data.newsViews || {};
+  data.brochureViews = data.brochureViews || {};
+  if (type === "page") data.pageViews = Number(data.pageViews || 0) + 1;
+  else if (type === "product") data.productViews[id] = Number(data.productViews[id] || 0) + 1;
+  else if (type === "news") data.newsViews[id] = Number(data.newsViews[id] || 0) + 1;
+  else if (type === "brochure") data.brochureViews[id] = Number(data.brochureViews[id] || 0) + 1;
+  const saved = await putf(env, "content/analytics.json", JSON.stringify(data, null, 2) + "\n", "Website analytics update", false, true);
+  return saved.ok ? out({ ok: true }) : out({ ok: false, error: saved.error }, saved.status);
+}
+
+async function adminContent(request, env, path) {
+  const name = pname(path);
+  if (!name) return out({ ok: false, error: "Invalid content path." }, 400);
+  if (!await session(request, env)) return out({ ok: false, error: "Unauthorized" }, 401);
+  const file = "content/" + name + ".json";
+  if (request.method === "GET") {
+    const current = await getf(env, file);
+    if (current.error) return out({ ok: false, error: current.error }, current.status);
+    if (!current.exists) return out({ ok: true, data: null });
+    try { return out({ ok: true, data: JSON.parse(current.text) }); }
+    catch { return out({ ok: false, error: "Stored JSON is invalid." }, 500); }
+  }
+  if (request.method !== "PUT") return out({ ok: false, error: "Method not allowed" }, 405);
+  let body;
+  try { body = await request.json(); } catch { return out({ ok: false, error: "Invalid JSON." }, 400); }
+  const text = JSON.stringify(Object.prototype.hasOwnProperty.call(body, "data") ? body.data : body, null, 2) + "\n";
+  if (text.length > MAX_JSON) return out({ ok: false, error: "Content is too large." }, 413);
+  const saved = await putf(env, file, text, "CMS update " + file, true, true);
+  return saved.ok ? out(saved) : out({ ok: false, error: saved.error }, saved.status);
+}
+
+async function login(request, env) {
+  if (request.method !== "POST") return out({ ok: false, error: "Method not allowed" }, 405);
+  let body;
+  try { body = await request.json(); } catch { return out({ ok: false, error: "Invalid request." }, 400); }
+  const missing = [];
+  if (!env.ADMIN_USERNAME) missing.push("ADMIN_USERNAME");
+  if (!env.ADMIN_PASSWORD) missing.push("ADMIN_PASSWORD");
+  if (!env.SESSION_SECRET) missing.push("SESSION_SECRET");
+  if (missing.length) return out({ ok: false, error: "Admin authentication is not configured in Cloudflare yet.", missing }, 503);
+  if (!eq(String(body.username || "").trim(), env.ADMIN_USERNAME) || !eq(String(body.password || ""), env.ADMIN_PASSWORD)) return out({ ok: false, error: "Invalid username or password." }, 401);
+  const payload = b64(JSON.stringify({ sub: env.ADMIN_USERNAME, exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS }))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  const token = payload + "." + await sign(env.SESSION_SECRET, payload);
+  return out({ ok: true }, 200, { "Set-Cookie": SESSION_COOKIE + "=" + encodeURIComponent(token) + "; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=" + SESSION_TTL_SECONDS });
+}
+
+async function upload(request, env) {
+  if (!await session(request, env)) return out({ ok: false, error: "Unauthorized" }, 401);
+  let body;
+  try { body = await request.json(); } catch { return out({ ok: false, error: "Invalid JSON." }, 400); }
+  const name = String(body.name || "").trim().replace(/[^A-Za-z0-9._-]/g, "_");
+  const mime = String(body.mime || "").toLowerCase();
+  const data = String(body.data || "");
+  if (!name || !data) return out({ ok: false, error: "File name and data are required." }, 400);
+  if (!["image/png", "image/jpeg", "image/webp", "image/svg+xml", "application/pdf"].includes(mime) || !/\.(png|jpe?g|webp|svg|pdf)$/i.test(name)) return out({ ok: false, error: "Only PNG, JPG, WEBP, SVG and PDF files are allowed." }, 415);
+  if (data.length * 0.75 > MAX_UPLOAD) return out({ ok: false, error: "Maximum upload size is 10 MB." }, 413);
+  const path = "assets/uploads/" + Date.now() + "-" + name;
+  const response = await fetch(gh(path), {
+    method: "PUT",
+    headers: { ...ghh(env), "Content-Type": "application/json" },
+    body: JSON.stringify({ message: "CMS upload " + name, content: data, branch: BRANCH })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) return out({ ok: false, error: result.message || "GitHub upload failed." }, response.status);
+  await log(env, { action: "upload", path, at: new Date().toISOString() });
+  return out({ ok: true, path, url: "/" + path });
+}
+
+async function del(request, env) {
+  if (!await session(request, env)) return out({ ok: false, error: "Unauthorized" }, 401);
+  const path = new URL(request.url).searchParams.get("path") || "";
+  if (!/^assets\/uploads\/[A-Za-z0-9._-]+$/.test(path)) return out({ ok: false, error: "Invalid file path." }, 400);
+  const current = await getf(env, path);
+  if (current.error) return out({ ok: false, error: current.error }, current.status);
+  if (!current.exists) return out({ ok: true, deleted: false });
+  const response = await fetch(gh(path), {
+    method: "DELETE",
+    headers: { ...ghh(env), "Content-Type": "application/json" },
+    body: JSON.stringify({ message: "CMS delete " + path, sha: current.sha, branch: BRANCH })
+  });
+  if (!response.ok) return out({ ok: false, error: "GitHub delete failed." }, response.status);
+  await log(env, { action: "delete", path, at: new Date().toISOString() });
+  return out({ ok: true, deleted: true });
+}
+
+async function serve(request, env) {
+  const asset = await env.ASSETS.fetch(request);
+  const contentType = asset.headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) return asset;
+
+  let html = await asset.text();
+  const path = new URL(request.url).pathname;
+  const version = "?v=" + WORKER_VERSION;
+  let scripts = "<script src=\"/public-enhancements.js" + version + "\"></script>" +
+    "<script src=\"/public-features.js" + version + "\"></script>" +
+    "<script src=\"/public-next.js" + version + "\"></script>";
+
+  if (path === "/admin" || path === "/admin/" || path === "/admin/index.html") {
+    scripts = "<script src=\"/admin/enhancements.js" + version + "\"></script>" +
+      "<script src=\"/admin/features.js" + version + "\"></script>" +
+      "<script src=\"/admin/next-features.js" + version + "\"></script>";
+  }
+
+  if (path === "/admin" || path === "/admin/" || path === "/admin/index.html" || path === "/" || path.endsWith(".html")) {
+    const marker = "</body>";
+    const position = html.toLowerCase().lastIndexOf(marker);
+    if (position >= 0) {
+      html = html.slice(0, position) + scripts + html.slice(position);
+    } else {
+      html += scripts;
+    }
+  }
+
+  const headers = new Headers(asset.headers);
+  headers.set("Cache-Control", "no-store");
+  headers.set("X-Zeta-Worker-Version", WORKER_VERSION);
+  return new Response(html, { status: asset.status, headers });
+}
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    if (url.pathname === "/api/health") return out({
+      ok: true,
+      worker: "zeta-biotech",
+      version: WORKER_VERSION,
+      repo: REPO,
+      bindings: {
+        ADMIN_USERNAME: !!env.ADMIN_USERNAME,
+        ADMIN_PASSWORD: !!env.ADMIN_PASSWORD,
+        GITHUB_TOKEN: !!env.GITHUB_TOKEN,
+        SESSION_SECRET: !!env.SESSION_SECRET,
+        RESEND_API_KEY: !!env.RESEND_API_KEY
+      }
+    });
+    if (url.pathname === "/api/leads") return lead(request, env);
+    if (url.pathname === "/api/job-applications") return jobApplication(request, env);
+    if (url.pathname === "/api/analytics") return analytics(request, env);
+    if (url.pathname === "/api/admin/login") return login(request, env);
+    if (url.pathname === "/api/admin/me") {
+      const current = await session(request, env);
+      return current ? out({ authenticated: true, username: current.sub }) : out({ authenticated: false }, 401);
+    }
+    if (url.pathname === "/api/admin/logout") return out({ ok: true }, 200, { "Set-Cookie": SESSION_COOKIE + "=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0" });
+    if (url.pathname.startsWith("/api/admin/content/")) return adminContent(request, env, url.pathname.slice("/api/admin/content/".length));
+    if (url.pathname === "/api/admin/upload") return upload(request, env);
+    if (url.pathname === "/api/admin/media/delete") return del(request, env);
+    return serve(request, env);
+  }
+};
