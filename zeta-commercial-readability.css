@@ -1,0 +1,7 @@
+/* ZETA BIOTECH — targeted readability fix for business and medical cards only */
+.zeta-commercial-card{color:#17303b!important}
+.zeta-commercial-card h3{color:#071b2b!important}
+.zeta-commercial-card p{color:#425b65!important}
+.zeta-commercial-card .btn.ghost{background:#ffffff!important;color:#071b2b!important;border-color:#b9cdd3!important}
+.zeta-commercial-card .btn.ghost:hover{background:#e8f7f6!important;color:#07596c!important;border-color:#10b7ad!important}
+.zeta-commercial-card .btn.primary{color:#ffffff!important}
