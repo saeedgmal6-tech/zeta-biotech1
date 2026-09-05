@@ -1,0 +1,149 @@
+/* ZETA BIOTECH — targeted inner-card readability layer */
+/* Visual-only override: improves text contrast inside Services, Business Information and Medical Information cards. */
+
+/* Main focus-area / services cards */
+.area,
+.area * {
+  text-shadow: none !important;
+}
+.area span,
+.area p,
+.area small,
+.area li {
+  color: #f2fbfb !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+.area b,
+.area strong,
+.area h3,
+.area h4 {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  opacity: 1 !important;
+}
+
+/* Business-information cards and medical-information cards, regardless of their exact generated class name */
+[class*="service"] p,
+[class*="service"] span,
+[class*="service"] small,
+[class*="services"] p,
+[class*="services"] span,
+[class*="services"] small,
+[class*="business"] p,
+[class*="business"] span,
+[class*="business"] small,
+[class*="medical"] p,
+[class*="medical"] span,
+[class*="medical"] small,
+[class*="clinical"] p,
+[class*="clinical"] span,
+[class*="clinical"] small,
+[id*="service"] p,
+[id*="service"] span,
+[id*="services"] p,
+[id*="services"] span,
+[id*="business"] p,
+[id*="business"] span,
+[id*="medical"] p,
+[id*="medical"] span,
+[id*="clinical"] p,
+[id*="clinical"] span {
+  color: #f1fafb !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+[class*="service"] b,
+[class*="service"] strong,
+[class*="service"] h3,
+[class*="service"] h4,
+[class*="services"] b,
+[class*="services"] strong,
+[class*="services"] h3,
+[class*="services"] h4,
+[class*="business"] b,
+[class*="business"] strong,
+[class*="business"] h3,
+[class*="business"] h4,
+[class*="medical"] b,
+[class*="medical"] strong,
+[class*="medical"] h3,
+[class*="medical"] h4,
+[class*="clinical"] b,
+[class*="clinical"] strong,
+[class*="clinical"] h3,
+[class*="clinical"] h4,
+[id*="service"] b,
+[id*="service"] strong,
+[id*="service"] h3,
+[id*="service"] h4,
+[id*="business"] b,
+[id*="business"] strong,
+[id*="business"] h3,
+[id*="business"] h4,
+[id*="medical"] b,
+[id*="medical"] strong,
+[id*="medical"] h3,
+[id*="medical"] h4,
+[id*="clinical"] b,
+[id*="clinical"] strong,
+[id*="clinical"] h3,
+[id*="clinical"] h4 {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+/* Common information-card patterns */
+.info-card p,
+.info-card span,
+.information-card p,
+.information-card span,
+.medical-card p,
+.medical-card span,
+.business-card p,
+.business-card span,
+.service-card p,
+.service-card span {
+  color: #f1fafb !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+
+.info-card b,
+.info-card strong,
+.info-card h3,
+.information-card b,
+.information-card strong,
+.information-card h3,
+.medical-card b,
+.medical-card strong,
+.medical-card h3,
+.business-card b,
+.business-card strong,
+.business-card h3,
+.service-card b,
+.service-card strong,
+.service-card h3 {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  opacity: 1 !important;
+}
+
+@media (max-width: 700px) {
+  .area span,
+  .area p,
+  .area small,
+  [class*="service"] p,
+  [class*="service"] span,
+  [class*="business"] p,
+  [class*="business"] span,
+  [class*="medical"] p,
+  [class*="medical"] span {
+    color: #f7fcfc !important;
+    font-weight: 600 !important;
+  }
+}
