@@ -1,0 +1,1 @@
+Security hardening components are isolated so the production Worker can be wired in a single controlled change after verification. Existing behavior is intentionally untouched until integration is validated.
