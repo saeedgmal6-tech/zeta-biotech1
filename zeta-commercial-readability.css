@@ -1,7 +1,8 @@
-/* ZETA BIOTECH — targeted readability fix for business and medical cards only */
-.zeta-commercial-card{color:#17303b!important}
-.zeta-commercial-card h3{color:#071b2b!important}
-.zeta-commercial-card p{color:#425b65!important}
-.zeta-commercial-card .btn.ghost{background:#ffffff!important;color:#071b2b!important;border-color:#b9cdd3!important}
-.zeta-commercial-card .btn.ghost:hover{background:#e8f7f6!important;color:#07596c!important;border-color:#10b7ad!important}
+/* ZETA BIOTECH — premium background and readability fix for business and medical cards only */
+.zeta-commercial .commercial-box{background:linear-gradient(145deg,#102a3a 0%,#123f50 52%,#292846 100%)!important;border-color:rgba(97,217,210,.20)!important;box-shadow:0 22px 55px rgba(0,0,0,.28)!important;color:#f4fbfb!important}
+.zeta-commercial-card,#zetaMedicalCenter .zeta-commercial-card{background:linear-gradient(145deg,#173b49 0%,#102d3c 58%,#242440 100%)!important;border-color:rgba(97,217,210,.20)!important;box-shadow:0 16px 36px rgba(0,0,0,.24)!important;color:#f4fbfb!important}
+.zeta-commercial-card h3,#zetaMedicalCenter .zeta-commercial-card h3{color:#ffffff!important}
+.zeta-commercial-card p,#zetaMedicalCenter .zeta-commercial-card p{color:#d8e8ea!important}
+.zeta-commercial-card .btn.ghost,#zetaMedicalCenter .zeta-commercial-card .btn.ghost{background:linear-gradient(135deg,#163c4b,#202541)!important;color:#ffffff!important;border-color:rgba(97,217,210,.35)!important}
+.zeta-commercial-card .btn.ghost:hover,#zetaMedicalCenter .zeta-commercial-card .btn.ghost:hover{background:linear-gradient(135deg,#10b7ad,#7567c8)!important;color:#ffffff!important;border-color:#61d9d2!important}
 .zeta-commercial-card .btn.primary{color:#ffffff!important}
