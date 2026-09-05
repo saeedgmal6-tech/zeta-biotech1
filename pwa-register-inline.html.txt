@@ -1,0 +1,3 @@
+<!-- PWA/structured-data integration snippet. Kept as a separate artifact to avoid overwriting the existing HTML. -->
+<script src="/pwa-bootstrap.js" defer></script>
+<script src="/seo-structured-data.js" defer></script>
