@@ -1,5 +1,40 @@
 (function(){
 'use strict';
+function zetaProductSaveHotfix(){
+  if(typeof state==='undefined'||typeof $!=='function')return;
+  window.clearProduct=function(){
+    if($('pId'))$('pId').value='';
+    ['pNameAr','pNameEn','pIngredientAr','pIngredientEn','pStrength','pDosageForm','pPackSize','pRegistrationNo','pCategoryAr','pCategoryEn','pIndicationAr','pIndicationEn','pDescAr','pDescEn','pImageUrls','pBrochureUrls'].forEach(function(x){if($(x))$(x).value=''});
+    if($('pHidden'))$('pHidden').value='false';
+    state.imageFiles=[];
+    if($('pImageFiles'))$('pImageFiles').value='';
+    if($('imageFileList'))$('imageFileList').innerHTML='';
+    if($('existingImages'))$('existingImages').innerHTML='';
+  };
+  window.saveProduct=async function(){
+    try{
+      const id=$('pId').value||uid();
+      const old=state.products.find(function(x){return String(x.id)===String(id)})||{};
+      const newImages=state.imageFiles.length?await uploadMany(state.imageFiles):[];
+      const manual=$('pImageUrls').value.split('\n').map(function(x){return x.trim()}).filter(Boolean);
+      const images=Array.from(new Set([].concat(imgs(old),manual,newImages)));
+      const pdfList=$('pBrochureUrls').value.split('\n').map(function(x){return x.trim()}).filter(Boolean);
+      const p={...old,id:id,nameAr:$('pNameAr').value.trim(),nameEn:$('pNameEn').value.trim(),activeIngredientAr:$('pIngredientAr').value.trim(),activeIngredientEn:$('pIngredientEn').value.trim(),strength:$('pStrength').value.trim(),dosageForm:$('pDosageForm').value.trim(),packSize:$('pPackSize').value.trim(),registrationNo:$('pRegistrationNo').value.trim(),categoryAr:$('pCategoryAr').value.trim(),categoryEn:$('pCategoryEn').value.trim(),indicationAr:$('pIndicationAr').value.trim(),indicationEn:$('pIndicationEn').value.trim(),descriptionAr:$('pDescAr').value.trim(),descriptionEn:$('pDescEn').value.trim(),images:images,brochures:pdfList,hidden:$('pHidden').value==='true',order:old.order||state.products.length+1};
+      delete p.image;
+      delete p.brochure;
+      const i=state.products.findIndex(function(x){return String(x.id)===String(id)});
+      if(i>=0)state.products[i]=p;else state.products.push(p);
+      state.products.forEach(function(x,j){x.order=j+1});
+      await saveContent('products',{products:state.products},'جارٍ حفظ المنتج...');
+      clearProduct();
+      renderAll();
+      msg('تم حفظ المنتج بنجاح');
+    }catch(e){msg(e.message,false)}
+  };
+  if($('saveProduct'))$('saveProduct').onclick=window.saveProduct;
+  if($('clearProduct'))$('clearProduct').onclick=window.clearProduct;
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(zetaProductSaveHotfix,0)});else zetaProductSaveHotfix();
 function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]})}
 async function get(path){try{var r=await fetch(path,{cache:'no-store',headers:{'Content-Type':'application/json'}});return r.ok?await r.json():{};}catch(e){return{}}}
 function classify(x){var s=String((x&&x.subject)||'')+' '+String((x&&x.message)||'');if(/Distributor Application|طلب موزع|كن موزع|موزع/i.test(s))return 'طلب توزيع';if(/Product Inquiry|استفسار عن المنتج|استفسار منتج/i.test(s))return 'استفسار منتج';return 'رسالة تواصل'}
