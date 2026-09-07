@@ -1,6 +1,8 @@
 {
   "pageViews": 0,
-  "productViews": {},
+  "productViews": {
+    "__page__/": 1
+  },
   "newsViews": {},
   "brochureViews": {}
 }
