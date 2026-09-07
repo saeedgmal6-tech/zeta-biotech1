@@ -1,3 +1,9 @@
 {
-  "events": []
+  "events": [
+    {
+      "action": "upload",
+      "path": "assets/uploads/1788819206695-65295.jpg",
+      "at": "2026-09-07T22:13:27.945Z"
+    }
+  ]
 }
