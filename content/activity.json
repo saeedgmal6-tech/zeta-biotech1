@@ -1,6 +1,11 @@
 {
   "events": [
     {
+      "action": "upload",
+      "path": "assets/uploads/1788850984910-51869.jpg",
+      "at": "2026-09-08T07:03:06.496Z"
+    },
+    {
       "action": "update",
       "path": "content/products.json",
       "at": "2026-09-08T06:58:11.774Z"
