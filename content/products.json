@@ -1,27 +1,3 @@
 {
-  "products": [
-    {
-      "id": "mtsbos5k7hpblq",
-      "nameAr": "",
-      "nameEn": "",
-      "activeIngredientAr": "",
-      "activeIngredientEn": "",
-      "strength": "",
-      "dosageForm": "",
-      "packSize": "",
-      "registrationNo": "",
-      "categoryAr": "",
-      "categoryEn": "",
-      "indicationAr": "",
-      "indicationEn": "",
-      "descriptionAr": "",
-      "descriptionEn": "",
-      "images": [
-        "/assets/uploads/1788850984910-51869.jpg"
-      ],
-      "brochures": [],
-      "hidden": false,
-      "order": 1
-    }
-  ]
+  "products": []
 }
