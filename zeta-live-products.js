@@ -1,0 +1,17 @@
+(function(){'use strict';
+var RAW='https://raw.githubusercontent.com/saeedgmal6-tech/zeta-biotech1/main/';
+var lastSignature='';
+var busy=false;
+function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]})}
+function pick(ar,en){return document.documentElement.lang==='ar'?(ar||en||''):(en||ar||'')}
+function imgs(p){return Array.isArray(p.images)&&p.images.length?p.images:(p.image?[p.image]:[])}
+function bros(p){return Array.isArray(p.brochures)&&p.brochures.length?p.brochures:(p.brochure?[p.brochure]:[])}
+function asset(v){var s=String(v||'').trim();if(!s)return s;if(/^https?:\/\//i.test(s)||/^data:/i.test(s))return s;if(/^\/assets\/uploads\//i.test(s))return RAW+s.slice(1);if(/^assets\/uploads\//i.test(s))return RAW+s;return s}
+function render(items){var g=document.querySelector('#productsGrid');if(!g)return;var q=(document.querySelector('#productSearch')?.value||'').trim().toLowerCase();var data=items.filter(function(p){var n=pick(p.nameAr,p.nameEn).toLowerCase(),a=pick(p.activeIngredientAr,p.activeIngredientEn).toLowerCase(),c=pick(p.categoryAr,p.categoryEn).toLowerCase();return !p.hidden&&(!q||n.includes(q)||a.includes(q)||c.includes(q))}).sort(function(a,b){return (Number(a.order)||0)-(Number(b.order)||0)});if(!data.length){g.innerHTML='<div class="empty">'+(q?(document.documentElement.lang==='ar'?'لا توجد نتائج مطابقة.':'No matching products.'):(document.documentElement.lang==='ar'?'لا توجد منتجات مضافة حتى الآن.':'No products have been added yet.'))+'</div>';return}g.innerHTML=data.map(function(p,i){var im=imgs(p),src=asset(im[0]),name=pick(p.nameAr,p.nameEn);return '<article class="card" data-live-product-id="'+esc(p.id||i)+'"><div class="card-image">'+(src?'<img class="card-image" loading="lazy" decoding="async" src="'+esc(src)+'" alt="'+esc(name)+'">':'<div class="detail-image-placeholder">ZETA<br>BIOTECH</div>')+'</div><div class="card-body"><span class="kicker">'+esc(pick(p.categoryAr,p.categoryEn)||'ZETA BIOTECH')+'</span><h3>'+esc(name||'—')+'</h3><div class="meta">'+esc(pick(p.activeIngredientAr,p.activeIngredientEn))+(p.strength?' • '+esc(p.strength):'')+'</div><p>'+esc(pick(p.descriptionAr,p.descriptionEn))+'</p><div class="card-actions"><a class="small-btn" href="product-details.html?id='+encodeURIComponent(p.id||i)+'">'+(document.documentElement.lang==='ar'?'عرض التفاصيل':'View Details')+' <span>↗</span></a>'+(bros(p).length?'<a class="small-btn" href="'+esc(asset(bros(p)[0]))+'" target="_blank" rel="noopener">'+(document.documentElement.lang==='ar'?'البروشور':'Brochure')+'</a>':'')+'</div></div></article>'}).join('');
+if(window.ZetaProduct3D&&typeof window.ZetaProduct3D.scan==='function')window.ZetaProduct3D.scan();
+}
+async function sync(){if(busy)return;busy=true;try{var r=await fetch(RAW+'content/products.json?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw 0;var data=await r.json();if(!Array.isArray(data))throw 0;var sig=JSON.stringify(data);if(sig!==lastSignature){lastSignature=sig;render(data)}}catch(e){}finally{busy=false}}
+function boot(){setTimeout(sync,1200);setInterval(sync,5000)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+window.ZetaLiveProducts={sync:sync};
+})();
