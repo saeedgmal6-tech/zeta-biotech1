@@ -2,6 +2,11 @@
   "events": [
     {
       "action": "upload",
+      "path": "assets/uploads/1788848785876-WhatsApp_Image_2026-09-03_at_11.11.04_PM.jpeg",
+      "at": "2026-09-08T06:26:27.073Z"
+    },
+    {
+      "action": "upload",
       "path": "assets/uploads/1788819206695-65295.jpg",
       "at": "2026-09-07T22:13:27.945Z"
     }
