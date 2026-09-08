@@ -1,6 +1,11 @@
 {
   "events": [
     {
+      "action": "update",
+      "path": "content/products.json",
+      "at": "2026-09-08T06:26:30.235Z"
+    },
+    {
       "action": "upload",
       "path": "assets/uploads/1788848785876-WhatsApp_Image_2026-09-03_at_11.11.04_PM.jpeg",
       "at": "2026-09-08T06:26:27.073Z"
