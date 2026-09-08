@@ -1,0 +1,27 @@
+{
+  "products": [
+    {
+      "id": "mtsadp93x53vag",
+      "nameAr": "",
+      "nameEn": "",
+      "activeIngredientAr": "",
+      "activeIngredientEn": "",
+      "strength": "",
+      "dosageForm": "",
+      "packSize": "",
+      "registrationNo": "",
+      "categoryAr": "",
+      "categoryEn": "",
+      "indicationAr": "",
+      "indicationEn": "",
+      "descriptionAr": "",
+      "descriptionEn": "",
+      "images": [
+        "/assets/uploads/1788848785876-WhatsApp_Image_2026-09-03_at_11.11.04_PM.jpeg"
+      ],
+      "brochures": [],
+      "hidden": false,
+      "order": 1
+    }
+  ]
+}
