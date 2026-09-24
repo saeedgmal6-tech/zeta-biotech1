@@ -2,6 +2,11 @@
   "events": [
     {
       "action": "update",
+      "path": "content/leads.json",
+      "at": "2026-09-24T09:36:55.910Z"
+    },
+    {
+      "action": "update",
       "path": "content/site.json",
       "at": "2026-09-24T09:36:08.708Z"
     },
