@@ -1,0 +1,35 @@
+{
+  "company": {
+    "name": "ZETA BIOTECH",
+    "phone": "",
+    "whatsapp": "0201555969921",
+    "email": "",
+    "address": {
+      "ar": "",
+      "en": ""
+    },
+    "googleMaps": "",
+    "facebook": "",
+    "instagram": "",
+    "linkedin": "",
+    "overview": {
+      "ar": "",
+      "en": ""
+    },
+    "footer": {
+      "ar": "ZETA BIOTECH — جميع الحقوق محفوظة.",
+      "en": "ZETA BIOTECH — All rights reserved."
+    }
+  },
+  "home": {
+    "heroTitleAr": "حلول دوائية موثوقة",
+    "heroTitleEn": "Trusted Pharmaceutical Solutions",
+    "heroTextAr": "أضف رسالتك الرئيسية من لوحة الإدارة.",
+    "heroTextEn": "Add your main message from the admin panel."
+  },
+  "about": {
+    "textAr": "",
+    "textEn": ""
+  },
+  "focusAreas": []
+}
