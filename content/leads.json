@@ -1,3 +1,16 @@
 {
-  "leads": []
+  "leads": [
+    {
+      "id": "8acb93b2-b9c2-4036-acdb-fe9933e435af",
+      "date": "2026-09-24T09:36:54.517Z",
+      "status": "New",
+      "name": "k",
+      "company": "",
+      "email": "",
+      "phone": "",
+      "subject": "Website Contact",
+      "message": "gygh",
+      "lang": "ar"
+    }
+  ]
 }
