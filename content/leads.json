@@ -1,6 +1,18 @@
 {
   "leads": [
     {
+      "id": "ad1cc1c7-f7f1-45d1-a0bd-6a2b7174258f",
+      "date": "2026-10-12T13:51:52.649Z",
+      "status": "New",
+      "name": "S",
+      "company": "S",
+      "email": "saeedgmal6@gmail.com",
+      "phone": "01553199974",
+      "subject": "Product Inquiry",
+      "message": "استفسار عن المنتج: Vonzasyance \nGgg",
+      "lang": "ar"
+    },
+    {
       "id": "a0ee73ee-5f92-4983-8986-b12ee7796722",
       "date": "2026-09-24T12:08:44.422Z",
       "status": "Closed",
